@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.routes_campaigns import router as campaigns_router
 from app.api.routes_customers import router as customers_router
+from app.api.routes_data import router as data_router
 from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_insights import router as insights_router
 from app.api.routes_model import router as model_router
@@ -24,6 +25,7 @@ app.add_middleware(
 )
 
 app.include_router(dashboard_router)
+app.include_router(data_router)
 app.include_router(customers_router)
 app.include_router(segments_router)
 app.include_router(campaigns_router)

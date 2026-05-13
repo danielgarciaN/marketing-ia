@@ -43,6 +43,9 @@ class DataService:
 
         self._loaded = True
 
+    def reset(self):
+        self._loaded = False
+
     def get_customer(self, customer_id: int) -> dict:
         row = self.customers[self.customers["CustomerID"] == customer_id]
         if row.empty:

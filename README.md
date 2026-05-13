@@ -22,6 +22,8 @@ The platform provides:
 - REST API with Swagger documentation.
 - Frontend dashboard connected to the backend API.
 - Bilingual portal UI with English and Spanish mode.
+- Dataset upload and retraining from the portal.
+- GBP/EUR currency display switch.
 
 ## Dataset
 
@@ -152,6 +154,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 | Method | Endpoint | Description |
 | --- | --- | --- |
 | GET | `/dashboard/summary` | Business KPIs |
+| GET | `/data/status` | Raw/processed dataset status |
+| POST | `/data/upload` | Upload a new CSV and optionally retrain |
+| POST | `/data/retrain` | Rebuild the pipeline from the current raw CSV |
 | GET | `/dashboard/revenue` | Monthly revenue |
 | GET | `/customers` | Paginated customer table |
 | GET | `/customers/{id}` | Customer detail |

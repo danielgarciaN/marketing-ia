@@ -10,23 +10,21 @@ import {
   YAxis,
 } from "recharts";
 import type { RevenuePoint } from "@/lib/types";
-
-const currency = new Intl.NumberFormat("en-GB", {
-  style: "currency",
-  currency: "GBP",
-  maximumFractionDigits: 0,
-});
+import type { Currency } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 
 export function RevenueChart({
   data,
   title,
   subtitle,
   tooltipLabel,
+  currency,
 }: {
   data: RevenuePoint[];
   title: string;
   subtitle: string;
   tooltipLabel: string;
+  currency: Currency;
 }) {
   return (
     <div className="chart-panel">
@@ -47,8 +45,8 @@ export function RevenueChart({
             </defs>
             <CartesianGrid stroke="#E5E0D8" strokeDasharray="3 3" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-            <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} tick={{ fontSize: 12 }} width={48} />
-            <Tooltip formatter={(value) => [currency.format(Number(value)), tooltipLabel]} />
+            <YAxis tickFormatter={(value) => formatCurrency(Number(value), currency)} tick={{ fontSize: 12 }} width={70} />
+            <Tooltip formatter={(value) => [formatCurrency(Number(value), currency), tooltipLabel]} />
             <Area dataKey="revenue" type="monotone" stroke="#2B5D7E" strokeWidth={2} fill="url(#revenueFill)" />
           </AreaChart>
         </ResponsiveContainer>

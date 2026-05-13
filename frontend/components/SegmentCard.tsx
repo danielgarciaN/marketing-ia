@@ -1,5 +1,6 @@
 import type { SegmentSummary } from "@/lib/types";
 import { formatCurrency, segmentClass } from "@/lib/format";
+import type { Currency } from "@/lib/format";
 import type { Locale } from "@/lib/i18n";
 import { segmentLabel } from "@/lib/i18n";
 
@@ -10,6 +11,7 @@ export function SegmentCard({
   locale,
   revenueLabel,
   shareLabel,
+  currency,
 }: {
   segment: SegmentSummary;
   selected: boolean;
@@ -17,6 +19,7 @@ export function SegmentCard({
   locale: Locale;
   revenueLabel: string;
   shareLabel: string;
+  currency: Currency;
 }) {
   return (
     <button className={`segment-card ${selected ? "is-selected" : ""}`} onClick={() => onSelect(segment.segment)}>
@@ -24,7 +27,7 @@ export function SegmentCard({
       <span className="segment-name">{segmentLabel(segment.segment, locale)}</span>
       <strong>{segment.count.toLocaleString()}</strong>
       <small>
-        {formatCurrency(segment.total_revenue)} {revenueLabel} - {segment.pct_revenue}% {shareLabel}
+        {formatCurrency(segment.total_revenue, currency)} {revenueLabel} - {segment.pct_revenue}% {shareLabel}
       </small>
     </button>
   );

@@ -1,6 +1,7 @@
 import type { Insight } from "@/lib/types";
 import type { Locale } from "@/lib/i18n";
 import { localizedInsight, priorityLabel } from "@/lib/i18n";
+import { convertCurrencyText, type Currency } from "@/lib/format";
 
 const priorityClass = (priority: string) => {
   const value = priority.toLowerCase();
@@ -15,11 +16,13 @@ export function InsightCard({
   locale,
   actionLabel,
   impactLabel,
+  currency,
 }: {
   insight: Insight;
   locale: Locale;
   actionLabel: string;
   impactLabel: string;
+  currency: Currency;
 }) {
   const localized = localizedInsight(insight, locale);
 
@@ -29,7 +32,7 @@ export function InsightCard({
         <span className="eyebrow">{localized.category}</span>
         <h3>{localized.title}</h3>
       </div>
-      <p>{localized.insight}</p>
+      <p>{convertCurrencyText(localized.insight, currency)}</p>
       <div className="insight-action">
         <strong>{actionLabel}</strong>
         <span>{localized.action}</span>

@@ -1,53 +1,31 @@
-# Guía de uso - AI Marketing Intelligence Platform
+# Guia de uso - AI Marketing Intelligence Platform
 
-## Qué es
+## Que es
 
-AI Marketing Intelligence Platform es una plataforma de analítica de marketing para ecommerce. Convierte datos transaccionales de clientes en un dashboard de negocio con segmentación RFM, clustering, recomendaciones de campañas, insights automáticos y simulación de ROI.
+AI Marketing Intelligence Platform es una plataforma de analitica de marketing para ecommerce. Convierte datos transaccionales de clientes en un dashboard de negocio con segmentacion RFM, clustering, recomendaciones de campanas, insights automaticos y simulacion de ROI.
 
 El objetivo es responder preguntas como:
 
-- Quiénes son los mejores clientes.
-- Qué clientes están en riesgo de abandono.
-- Qué segmentos generan más ingresos.
-- Qué campaña conviene enviar a cada segmento.
-- Cómo evoluciona el revenue.
-- Qué acciones pueden mejorar retención, upsell y reactivación.
+- Quienes son los mejores clientes.
+- Que clientes estan en riesgo de abandono.
+- Que segmentos generan mas ingresos.
+- Que campana conviene enviar a cada segmento.
+- Como evoluciona el revenue.
+- Que acciones pueden mejorar retencion, upsell y reactivacion.
 
-## Cómo funciona por dentro
+## Como funciona por dentro
 
 El flujo principal es:
 
 1. `generate_dataset.py` genera un dataset ecommerce con estructura tipo Online Retail.
-2. `app/ml/preprocess.py` limpia transacciones inválidas.
+2. `app/ml/preprocess.py` limpia transacciones invalidas.
 3. `app/ml/rfm.py` calcula Recency, Frequency, Monetary, ticket medio y segmentos de negocio.
 4. `app/ml/clustering.py` entrena KMeans y genera coordenadas PCA para visualizar clusters.
 5. `app/ml/train_model.py` guarda CSV/JSON procesados y artefactos `.joblib`.
 6. FastAPI expone los resultados mediante endpoints REST.
 7. Next.js consume la API y muestra el portal visual.
 
-## Estructura importante
-
-```text
-files/
-  backend/
-    generate_dataset.py
-    app/
-      main.py
-      api/
-      services/
-      ml/
-      data/
-        raw/
-        processed/
-      artifacts/
-  frontend/
-    app/
-    components/
-    lib/
-  docs/
-```
-
-## Cómo arrancar todo
+## Como arrancar todo
 
 Abre PowerShell en:
 
@@ -91,9 +69,70 @@ Abre el portal en:
 http://localhost:3000
 ```
 
-## Cómo regenerar datos y modelo
+## Como subir otro dataset desde la plataforma
 
-Solo hace falta si cambias el dataset, reglas RFM, clustering o quieres refrescar los datos:
+El portal incluye una pantalla llamada:
+
+```text
+Data / Datos
+```
+
+Desde esa pantalla puedes:
+
+1. Seleccionar un archivo CSV.
+2. Decidir si quieres reentrenar automaticamente despues de subirlo.
+3. Subir el dataset.
+4. Ver el estado del dataset raw y los datos procesados.
+5. Reentrenar manualmente el dataset actual.
+
+El CSV debe tener estas columnas:
+
+```text
+InvoiceNo
+StockCode
+Description
+Quantity
+InvoiceDate
+UnitPrice
+CustomerID
+Country
+```
+
+Cuando subes un CSV con `Retrain after upload` activado, el backend hace esto:
+
+1. Valida que el archivo tenga las columnas requeridas.
+2. Guarda el CSV en `backend/app/data/raw/online_retail.csv`.
+3. Ejecuta el pipeline completo de entrenamiento.
+4. Regenera los CSV/JSON procesados.
+5. Recarga los datos en memoria.
+6. El frontend refresca el dashboard.
+
+Endpoints usados:
+
+```text
+GET  /data/status
+POST /data/upload
+POST /data/retrain
+```
+
+Tambien puedes probarlos desde:
+
+```text
+http://localhost:8000/docs
+```
+
+## Que pasa si mi CSV tiene otras columnas
+
+Si tu dataset usa otros nombres, por ejemplo `order_id` en vez de `InvoiceNo`, tienes dos opciones:
+
+1. Renombrar las columnas en el CSV antes de subirlo.
+2. Adaptar el backend para aceptar un mapeo de columnas.
+
+La version actual espera el esquema tipo Online Retail para mantener el pipeline simple y reproducible.
+
+## Como regenerar datos y modelo desde terminal
+
+Solo hace falta si cambias el dataset, reglas RFM, clustering o quieres refrescar los datos sin usar la pantalla Data:
 
 ```powershell
 cd C:\Users\Daniel\Desktop\Proyectos\marketing-ia\files\backend
@@ -114,6 +153,37 @@ Esto actualiza:
 - `app/artifacts/scaler.joblib`
 - `app/artifacts/pca.joblib`
 
+## Moneda: libras o euros
+
+El dataset base usa importes con logica de libras (`GBP`), porque imita el dataset Online Retail original de ecommerce UK.
+
+El portal permite cambiar la visualizacion a euros desde el selector superior:
+
+```text
+GBP | EUR
+```
+
+Tambien hay un control en la pantalla `Data / Datos`.
+
+Que hace este cambio:
+
+- Convierte visualmente KPIs, revenue, ticket medio, clientes, segmentos, clustering, simulador e importes de insights.
+- No modifica el CSV original.
+- No reentrena el modelo.
+- Mantiene la misma escala de negocio, solo cambia la moneda mostrada.
+
+La conversion actual usa una tasa fija definida en el frontend:
+
+```text
+1 GBP = 1.16 EUR
+```
+
+Si quieres cambiarla, edita:
+
+```text
+frontend/lib/format.ts
+```
+
 ## Idioma del portal
 
 En la parte superior derecha del portal hay un selector:
@@ -122,9 +192,7 @@ En la parte superior derecha del portal hay un selector:
 EN | ES
 ```
 
-Sirve para cambiar la interfaz entre inglés y español. Traduce navegación, títulos, KPIs, etiquetas, segmentos, campañas, prioridades, metodología y textos principales del simulador.
-
-Algunos textos largos que vienen generados por el backend pueden mantenerse parcialmente en inglés si contienen narrativa dinámica. La arquitectura permite extenderlo después con endpoints localizados o traducción mediante LLM.
+Sirve para cambiar la interfaz entre ingles y espanol. Traduce navegacion, titulos, KPIs, etiquetas, segmentos, campanas, prioridades, metodologia y textos principales del simulador.
 
 ## Pantallas del portal
 
@@ -140,23 +208,29 @@ Muestra KPIs ejecutivos:
 - Clientes inactivos.
 - Revenue mensual.
 - Revenue por segmento.
-- Distribución de clientes.
+- Distribucion de clientes.
 
-Sirve para una lectura rápida del estado del negocio.
+### Data / Datos
+
+Sirve para gestionar el dataset:
+
+- Subir un nuevo CSV.
+- Reentrenar el pipeline.
+- Ver estado de dataset raw y procesado.
+- Consultar columnas requeridas.
+- Cambiar visualizacion GBP/EUR.
 
 ### Customers / Clientes
 
 Muestra una tabla de clientes ordenada por revenue:
 
 - CustomerID.
-- País.
+- Pais.
 - Segmento.
 - Revenue.
 - Frecuencia.
 - Recency.
 - Cluster.
-
-Sirve para identificar clientes de alto valor o clientes que deberían recibir acciones CRM específicas.
 
 ### Segments / Segmentos
 
@@ -170,28 +244,26 @@ Muestra segmentos RFM como:
 - Compradores ocasionales.
 - Alto potencial.
 
-Al seleccionar un segmento se ven métricas y campañas recomendadas.
+Al seleccionar un segmento se ven metricas y campanas recomendadas.
 
 ### Clustering
 
 Muestra la parte de Machine Learning:
 
-- Número de clusters.
+- Numero de clusters.
 - Silhouette score.
 - Inertia.
 - Scatter plot PCA.
 
-Sirve para explicar que, además de reglas RFM, se usa clustering para descubrir patrones de comportamiento.
-
-### Campaigns / Campañas
+### Campaigns / Campanas
 
 Incluye un simulador donde eliges:
 
 - Segmento objetivo.
-- Canal de campaña.
+- Canal de campana.
 - Presupuesto.
 - Descuento.
-- Conversión esperada.
+- Conversion esperada.
 
 Devuelve:
 
@@ -199,35 +271,34 @@ Devuelve:
 - ROI.
 - Clientes alcanzados.
 - Conversiones esperadas.
-- Recomendación final.
+- Recomendacion final.
 
 ### Insights
 
-Genera insights automáticos orientados a negocio:
+Genera insights automaticos orientados a negocio:
 
-- Concentración de revenue en VIP.
+- Concentracion de revenue en VIP.
 - Riesgo de churn.
-- Conversión de nuevos clientes.
-- Recuperación de clientes perdidos.
+- Conversion de nuevos clientes.
+- Recuperacion de clientes perdidos.
 - Tendencia de revenue.
 - Oportunidades de upsell.
 
-Sirve como capa narrativa para presentar acciones recomendadas.
+### Methodology / Metodologia
 
-### Methodology / Metodología
-
-Resume el enfoque técnico:
+Resume el enfoque tecnico:
 
 - Limpieza de datos.
 - RFM.
 - KMeans + PCA.
-- Activación mediante campañas e insights.
-
-Es útil para portfolio porque explica las decisiones técnicas sin abrir el código.
+- Activacion mediante campanas e insights.
 
 ## Endpoints principales
 
 ```text
+GET  /data/status
+POST /data/upload
+POST /data/retrain
 GET  /dashboard/summary
 GET  /dashboard/revenue
 GET  /customers
@@ -242,39 +313,37 @@ GET  /model/clusters
 GET  /model/cluster-points
 ```
 
-Puedes probarlos desde:
+## Como presentarlo en portfolio
 
-```text
-http://localhost:8000/docs
-```
+Puedes describirlo asi:
 
-## Cómo presentarlo en portfolio
-
-Puedes describirlo así:
-
-> Plataforma de Marketing Intelligence que combina análisis RFM, segmentación de clientes, clustering con KMeans, recomendaciones de campañas e insights automáticos para ayudar a equipos CRM/ecommerce a priorizar acciones de retención, upsell y reactivación.
+> Plataforma de Marketing Intelligence que permite subir datos ecommerce, recalcular segmentacion RFM, entrenar clustering, simular campanas y generar insights accionables para equipos CRM.
 
 Puntos fuertes para explicar:
 
 - No es solo un notebook: tiene backend, API y frontend.
+- Permite subir nuevos datasets desde el portal.
 - El pipeline es reproducible.
-- Las métricas tienen interpretación de negocio.
-- Las campañas se conectan con segmentos.
-- Hay simulador de impacto económico.
-- El producto es bilingüe ES/EN.
+- Las metricas tienen interpretacion de negocio.
+- Las campanas se conectan con segmentos.
+- Hay simulador de impacto economico.
+- El producto es bilingue ES/EN.
+- Permite visualizar importes en GBP o EUR.
 
 ## Limitaciones actuales
 
-- El dataset es sintético, aunque replica la estructura de Online Retail.
+- El dataset base es sintetico, aunque replica la estructura de Online Retail.
 - Los insights son reglas de negocio, no LLM real.
 - El MVP usa CSV/JSON en vez de base de datos.
 - El simulador estima ROI con supuestos, no con experimentos A/B reales.
+- La conversion GBP/EUR usa una tasa fija en frontend.
 
-## Próximos pasos recomendados
+## Proximos pasos recomendados
 
-- Añadir base de datos PostgreSQL o Supabase.
+- Anadir base de datos PostgreSQL o Supabase.
+- Permitir mapeo de columnas en la subida de CSV.
 - Integrar datos reales de Shopify, WooCommerce o CRM.
-- Añadir autenticación.
-- Añadir traducción completa del backend por `?locale=es`.
-- Añadir LLM para reescribir insights con tono ejecutivo.
+- Anadir autenticacion.
+- Anadir LLM para reescribir insights con tono ejecutivo.
+- Usar una API de tipo de cambio para GBP/EUR.
 - Desplegar frontend en Vercel y backend en Render/Railway.

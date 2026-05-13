@@ -1,5 +1,6 @@
 import type { Customer } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
+import type { Currency } from "@/lib/format";
 import type { Locale } from "@/lib/i18n";
 import { segmentLabel } from "@/lib/i18n";
 
@@ -7,9 +8,11 @@ export function CustomerTable({
   customers,
   locale,
   labels,
+  currency,
 }: {
   customers: Customer[];
   locale: Locale;
+  currency: Currency;
   labels: {
     customer: string;
     country: string;
@@ -40,7 +43,7 @@ export function CustomerTable({
               <td>{customer.CustomerID}</td>
               <td>{customer.Country}</td>
               <td>{segmentLabel(customer.Segment, locale)}</td>
-              <td>{formatCurrency(customer.Monetary)}</td>
+              <td>{formatCurrency(customer.Monetary, currency)}</td>
               <td>{customer.Frequency}</td>
               <td>{customer.Recency}d</td>
               <td>{customer.Cluster}</td>

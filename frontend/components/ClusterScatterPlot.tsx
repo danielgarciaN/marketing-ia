@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import type { ClusterPoint } from "@/lib/types";
 import { formatCurrency } from "@/lib/format";
+import type { Currency } from "@/lib/format";
 
 const COLORS = ["#2B5D7E", "#22D3EE", "#10B981", "#F59E0B", "#EF4444", "#7C3AED"];
 
@@ -19,11 +20,13 @@ export function ClusterScatterPlot({
   title,
   subtitle,
   revenueLabel,
+  currency,
 }: {
   points: ClusterPoint[];
   title: string;
   subtitle: string;
   revenueLabel: string;
+  currency: Currency;
 }) {
   const clusters = Array.from(new Set(points.map((point) => point.Cluster))).sort((a, b) => a - b);
 
@@ -42,7 +45,7 @@ export function ClusterScatterPlot({
             <Tooltip
               cursor={{ strokeDasharray: "3 3" }}
               formatter={(value, name) => {
-                if (name === "Monetary") return [formatCurrency(Number(value)), revenueLabel];
+                if (name === "Monetary") return [formatCurrency(Number(value), currency), revenueLabel];
                 return [Number(value).toFixed(2), name];
               }}
             />

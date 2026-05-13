@@ -108,3 +108,35 @@ export type CampaignSimulationResult = {
   recommendation: string;
   error?: string;
 };
+
+export type DataStatus = {
+  raw_dataset: {
+    exists: boolean;
+    path?: string;
+    bytes?: number;
+    modified_at?: number;
+  };
+  processed_customers: {
+    exists: boolean;
+    path?: string;
+    bytes?: number;
+    modified_at?: number;
+  };
+  required_columns: string[];
+  loaded_in_memory: boolean;
+  customer_count?: number;
+  segments?: string[];
+};
+
+export type DataUploadResult = {
+  status: string;
+  filename?: string;
+  bytes?: number;
+  raw_path?: string;
+  retrained?: boolean;
+  training?: {
+    n_clusters: number;
+    silhouette_score: number;
+    inertia: number;
+  };
+};

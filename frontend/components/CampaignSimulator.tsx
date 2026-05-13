@@ -4,7 +4,8 @@ import { useState } from "react";
 import { Play } from "lucide-react";
 import { api } from "@/lib/api";
 import type { CampaignSimulationResult, SegmentSummary } from "@/lib/types";
-import { formatCurrency } from "@/lib/format";
+import { convertToBaseCurrency, formatCurrency } from "@/lib/format";
+import type { Currency } from "@/lib/format";
 import type { Locale } from "@/lib/i18n";
 import { campaignLabel, segmentLabel } from "@/lib/i18n";
 
@@ -14,9 +15,11 @@ export function CampaignSimulator({
   segments,
   locale,
   labels,
+  currency,
 }: {
   segments: SegmentSummary[];
   locale: Locale;
+  currency: Currency;
   labels: {
     segment: string;
     campaignType: string;
@@ -47,7 +50,7 @@ export function CampaignSimulator({
       const response = await api.simulateCampaign({
         segment,
         campaign_type: campaignType,
-        budget,
+        budget: convertToBaseCurrency(budget, currency),
         discount_pct: discountPct,
         expected_conversion_rate: conversionRate,
       });
@@ -104,7 +107,7 @@ export function CampaignSimulator({
             <div className="result-grid">
               <div>
                 <span>{labels.estimatedRevenue}</span>
-                <strong>{formatCurrency(result.estimated_revenue)}</strong>
+                <strong>{formatCurrency(result.estimated_revenue, currency)}</strong>
               </div>
               <div>
                 <span>{labels.roi}</span>
