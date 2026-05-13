@@ -1,0 +1,58 @@
+{
+  "source": {
+    "filename": "online_retail.csv",
+    "source_currency": "GBP",
+    "column_mapping": {
+      "invoice_id": "InvoiceNo",
+      "product_id": "StockCode",
+      "description": "Description",
+      "quantity": "Quantity",
+      "invoice_date": "InvoiceDate",
+      "unit_price": "UnitPrice",
+      "customer_id": "CustomerID",
+      "country": "Country"
+    }
+  },
+  "rfm": {
+    "score_quantiles": 5,
+    "weights": {
+      "recency": 1.0,
+      "frequency": 1.0,
+      "monetary": 1.0
+    },
+    "active_days": 30,
+    "inactive_days": 180,
+    "new_customer_max_frequency": 2,
+    "segment_thresholds": {
+      "vip": {
+        "r": 4,
+        "f": 4,
+        "m": 4
+      },
+      "loyal": {
+        "r": 4,
+        "f": 3,
+        "m": 3
+      },
+      "at_risk": {
+        "r": 2,
+        "f": 3,
+        "m": 3
+      },
+      "lost": {
+        "r": 2,
+        "f": 2,
+        "m": 2
+      },
+      "high_potential": {
+        "r": 3,
+        "f": 2,
+        "m": 3
+      }
+    }
+  },
+  "clustering": {
+    "n_clusters": 5,
+    "auto_select_k": false
+  }
+}

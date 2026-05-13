@@ -9,10 +9,12 @@ export function CustomerTable({
   locale,
   labels,
   currency,
+  sourceCurrency = "GBP",
 }: {
   customers: Customer[];
   locale: Locale;
   currency: Currency;
+  sourceCurrency?: Currency;
   labels: {
     customer: string;
     country: string;
@@ -43,7 +45,7 @@ export function CustomerTable({
               <td>{customer.CustomerID}</td>
               <td>{customer.Country}</td>
               <td>{segmentLabel(customer.Segment, locale)}</td>
-              <td>{formatCurrency(customer.Monetary, currency)}</td>
+              <td>{formatCurrency(customer.Monetary, currency, sourceCurrency)}</td>
               <td>{customer.Frequency}</td>
               <td>{customer.Recency}d</td>
               <td>{customer.Cluster}</td>

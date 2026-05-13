@@ -7,6 +7,12 @@
   "active_customers": 881,
   "inactive_customers": 299,
   "top_country": "United Kingdom",
+  "source_currency": "GBP",
+  "rfm_weights": {
+    "recency": 1.0,
+    "frequency": 1.0,
+    "monetary": 1.0
+  },
   "date_range": {
     "start": "2010-12-01",
     "end": "2011-12-08"

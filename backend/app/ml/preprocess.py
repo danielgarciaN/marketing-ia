@@ -8,14 +8,20 @@ PROCESSED_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "processe
 
 
 def load_raw_data(path: str = RAW_PATH) -> pd.DataFrame:
-    return pd.read_csv(path, parse_dates=["InvoiceDate"])
+    df = pd.read_csv(path)
+    df["InvoiceDate"] = pd.to_datetime(df["InvoiceDate"], errors="coerce")
+    return df
 
 
 def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     """Clean raw transaction data."""
     initial = len(df)
 
-    df = df.dropna(subset=["CustomerID"]).copy()
+    df = df.dropna(subset=["CustomerID", "InvoiceDate"]).copy()
+    df["CustomerID"] = pd.to_numeric(df["CustomerID"], errors="coerce")
+    df["Quantity"] = pd.to_numeric(df["Quantity"], errors="coerce")
+    df["UnitPrice"] = pd.to_numeric(df["UnitPrice"], errors="coerce")
+    df = df.dropna(subset=["CustomerID", "Quantity", "UnitPrice"])
     df["CustomerID"] = df["CustomerID"].astype(int)
 
     df = df[~df["InvoiceNo"].astype(str).str.startswith("C")]
@@ -23,7 +29,11 @@ def clean_data(df: pd.DataFrame) -> pd.DataFrame:
     df = df[df["UnitPrice"] > 0]
     df = df.drop_duplicates()
 
-    df["Revenue"] = (df["Quantity"] * df["UnitPrice"]).round(2)
+    if "Revenue" not in df.columns:
+        df["Revenue"] = df["Quantity"] * df["UnitPrice"]
+    df["Revenue"] = pd.to_numeric(df["Revenue"], errors="coerce")
+    df = df.dropna(subset=["Revenue"])
+    df["Revenue"] = df["Revenue"].round(2)
     df["InvoiceMonth"] = df["InvoiceDate"].dt.to_period("M").astype(str)
     df["InvoiceDay"] = df["InvoiceDate"].dt.date
 

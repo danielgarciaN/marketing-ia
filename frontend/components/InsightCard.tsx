@@ -17,12 +17,14 @@ export function InsightCard({
   actionLabel,
   impactLabel,
   currency,
+  sourceCurrency = "GBP",
 }: {
   insight: Insight;
   locale: Locale;
   actionLabel: string;
   impactLabel: string;
   currency: Currency;
+  sourceCurrency?: Currency;
 }) {
   const localized = localizedInsight(insight, locale);
 
@@ -32,7 +34,7 @@ export function InsightCard({
         <span className="eyebrow">{localized.category}</span>
         <h3>{localized.title}</h3>
       </div>
-      <p>{convertCurrencyText(localized.insight, currency)}</p>
+      <p>{convertCurrencyText(localized.insight, currency, sourceCurrency)}</p>
       <div className="insight-action">
         <strong>{actionLabel}</strong>
         <span>{localized.action}</span>

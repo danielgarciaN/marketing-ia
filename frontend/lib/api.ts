@@ -10,6 +10,8 @@ import type {
   ModelMetrics,
   RevenuePoint,
   SegmentSummary,
+  PipelineConfig,
+  SchemaInference,
 } from "./types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000";
@@ -56,11 +58,28 @@ export const api = {
   metrics: () => request<ModelMetrics>("/model/metrics"),
   clusterPoints: () => request<{ data: ClusterPoint[]; total: number; limit: number }>("/model/cluster-points?limit=600"),
   dataStatus: () => request<DataStatus>("/data/status"),
-  retrainData: () => request<DataUploadResult>("/data/retrain", { method: "POST" }),
-  uploadDataset: (file: File, retrain = true) => {
+  config: () => request<PipelineConfig>("/data/config"),
+  saveConfig: (body: Partial<PipelineConfig>) =>
+    request<PipelineConfig>("/data/config", {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  retrainData: (config?: Partial<PipelineConfig>) =>
+    request<DataUploadResult>("/data/retrain", {
+      method: "POST",
+      body: config ? JSON.stringify(config) : JSON.stringify({}),
+    }),
+  inferSchema: (file: File) => {
+    const form = new FormData();
+    form.append("file", file);
+    return uploadRequest<SchemaInference>("/data/infer-schema", form);
+  },
+  uploadDataset: (file: File, retrain = true, mapping?: Record<string, string>, config?: Partial<PipelineConfig>) => {
     const form = new FormData();
     form.append("file", file);
     form.append("retrain", String(retrain));
+    if (mapping) form.append("mapping", JSON.stringify(mapping));
+    if (config) form.append("config", JSON.stringify(config));
     return uploadRequest<DataUploadResult>("/data/upload", form);
   },
   simulateCampaign: (body: {

@@ -16,10 +16,12 @@ export function CampaignSimulator({
   locale,
   labels,
   currency,
+  sourceCurrency = "GBP",
 }: {
   segments: SegmentSummary[];
   locale: Locale;
   currency: Currency;
+  sourceCurrency?: Currency;
   labels: {
     segment: string;
     campaignType: string;
@@ -50,7 +52,7 @@ export function CampaignSimulator({
       const response = await api.simulateCampaign({
         segment,
         campaign_type: campaignType,
-        budget: convertToBaseCurrency(budget, currency),
+        budget: convertToBaseCurrency(budget, currency, sourceCurrency),
         discount_pct: discountPct,
         expected_conversion_rate: conversionRate,
       });
@@ -107,7 +109,7 @@ export function CampaignSimulator({
             <div className="result-grid">
               <div>
                 <span>{labels.estimatedRevenue}</span>
-                <strong>{formatCurrency(result.estimated_revenue, currency)}</strong>
+                <strong>{formatCurrency(result.estimated_revenue, currency, sourceCurrency)}</strong>
               </div>
               <div>
                 <span>{labels.roi}</span>

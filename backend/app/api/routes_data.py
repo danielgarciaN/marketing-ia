@@ -1,6 +1,9 @@
-"""Dataset upload and retraining endpoints."""
+"""Dataset upload, schema inference, configurable mapping and retraining endpoints."""
 from io import BytesIO
+import json
 import os
+import re
+from typing import Any
 
 import pandas as pd
 from fastapi import APIRouter, File, Form, HTTPException, UploadFile
@@ -8,18 +11,38 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from app.ml.preprocess import RAW_PATH
 from app.ml.train_model import run_pipeline
 from app.services.data_service import DATA_DIR, data_service
+from app.services.pipeline_config_service import (
+    CANONICAL_FIELDS,
+    REQUIRED_CANONICAL_FIELDS,
+    deep_merge,
+    load_pipeline_config,
+    save_pipeline_config,
+)
 
 router = APIRouter(prefix="/data", tags=["Data"])
 
-REQUIRED_COLUMNS = {
-    "InvoiceNo",
-    "StockCode",
-    "Description",
-    "Quantity",
-    "InvoiceDate",
-    "UnitPrice",
-    "CustomerID",
-    "Country",
+FIELD_LABELS = {
+    "invoice_id": "Invoice ID",
+    "product_id": "Product ID",
+    "description": "Product description",
+    "quantity": "Quantity",
+    "invoice_date": "Invoice date",
+    "unit_price": "Unit price",
+    "customer_id": "Customer ID",
+    "country": "Country",
+    "revenue": "Revenue",
+}
+
+FIELD_SYNONYMS = {
+    "invoice_id": ["invoiceno", "invoice", "invoiceid", "orderid", "ordernumber", "order", "transactionid", "transaction"],
+    "product_id": ["stockcode", "sku", "productid", "productcode", "itemid", "variantid"],
+    "description": ["description", "productname", "product", "itemname", "title", "name"],
+    "quantity": ["quantity", "qty", "units", "items", "itemquantity", "lineitemquantity"],
+    "invoice_date": ["invoicedate", "date", "orderdate", "createdat", "created", "timestamp", "purchasedate"],
+    "unit_price": ["unitprice", "price", "unitcost", "itemprice", "lineprice", "amount", "subtotal"],
+    "customer_id": ["customerid", "customer", "userid", "buyerid", "clientid", "email", "customeremail"],
+    "country": ["country", "billingcountry", "shippingcountry", "market", "region"],
+    "revenue": ["revenue", "sales", "total", "totalprice", "ordertotal", "lineitemtotal", "grosssales", "netrevenue"],
 }
 
 
@@ -28,11 +51,14 @@ def get_data_status():
     raw_info = _file_info(RAW_PATH)
     processed_path = os.path.join(DATA_DIR, "customers_rfm.csv")
     processed_info = _file_info(processed_path)
+    config = load_pipeline_config()
 
     status = {
         "raw_dataset": raw_info,
         "processed_customers": processed_info,
-        "required_columns": sorted(REQUIRED_COLUMNS),
+        "required_fields": _field_metadata(),
+        "required_columns": sorted(CANONICAL_FIELDS.values()),
+        "config": config,
         "loaded_in_memory": data_service._loaded,
     }
 
@@ -44,60 +70,107 @@ def get_data_status():
     return status
 
 
-@router.post("/upload")
-async def upload_dataset(file: UploadFile = File(...), retrain: bool = Form(True)):
-    if not file.filename.lower().endswith(".csv"):
-        raise HTTPException(status_code=400, detail="Only CSV files are supported.")
+@router.get("/config")
+def get_config():
+    return load_pipeline_config()
 
+
+@router.post("/config")
+async def update_config(payload: dict[str, Any]):
+    return save_pipeline_config(payload)
+
+
+@router.post("/infer-schema")
+async def infer_schema(file: UploadFile = File(...)):
     content = await file.read()
     if not content:
         raise HTTPException(status_code=400, detail="Uploaded file is empty.")
 
-    try:
-        preview = pd.read_csv(BytesIO(content), nrows=100)
-    except Exception as exc:
-        raise HTTPException(status_code=400, detail=f"Could not read CSV: {exc}") from exc
+    df = _read_tabular_file(content, file.filename, preview_only=True)
+    inference = _infer_mapping(df)
+    quality = _profile_dataframe(df, inference["mapping"])
+    return {
+        "filename": file.filename,
+        "columns": df.columns.tolist(),
+        "sample_rows": df.head(5).fillna("").to_dict(orient="records"),
+        "mapping": inference["mapping"],
+        "confidence": inference["confidence"],
+        "missing_fields": _missing_fields(inference["mapping"]),
+        "field_metadata": _field_metadata(),
+        "quality": quality,
+    }
 
-    missing = sorted(REQUIRED_COLUMNS - set(preview.columns))
+
+@router.post("/upload")
+async def upload_dataset(
+    file: UploadFile = File(...),
+    retrain: bool = Form(True),
+    mapping: str | None = Form(None),
+    config: str | None = Form(None),
+):
+    content = await file.read()
+    if not content:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    df = _read_tabular_file(content, file.filename, preview_only=False)
+    inferred = _infer_mapping(df)["mapping"]
+    provided_mapping = _parse_json_form(mapping, "mapping") or {}
+    column_mapping = {**inferred, **{k: v for k, v in provided_mapping.items() if v}}
+    missing = _missing_fields(column_mapping)
+
     if missing:
         raise HTTPException(
             status_code=400,
             detail={
-                "message": "Dataset is missing required columns.",
-                "missing_columns": missing,
-                "required_columns": sorted(REQUIRED_COLUMNS),
+                "message": "Dataset mapping is incomplete.",
+                "missing_fields": missing,
+                "field_metadata": _field_metadata(),
+                "inferred_mapping": inferred,
+                "available_columns": df.columns.tolist(),
             },
         )
 
+    pipeline_config = load_pipeline_config()
+    pipeline_config = _merge_upload_config(pipeline_config, _parse_json_form(config, "config") or {})
+    pipeline_config["source"]["filename"] = file.filename
+    pipeline_config["source"]["column_mapping"] = column_mapping
+    saved_config = save_pipeline_config(pipeline_config)
+
+    normalized = _normalize_dataset(df, column_mapping)
     os.makedirs(os.path.dirname(RAW_PATH), exist_ok=True)
-    with open(RAW_PATH, "wb") as f:
-        f.write(content)
+    normalized.to_csv(RAW_PATH, index=False)
 
     result = {
         "status": "uploaded",
         "filename": file.filename,
+        "rows": int(len(normalized)),
         "bytes": len(content),
         "raw_path": RAW_PATH,
+        "mapping": column_mapping,
+        "config": saved_config,
+        "quality": _profile_dataframe(normalized, {key: CANONICAL_FIELDS[key] for key in CANONICAL_FIELDS}),
         "retrained": False,
     }
 
     if retrain:
-        result["training"] = _run_training()
+        result["training"] = _run_training(saved_config)
         result["retrained"] = True
 
     return result
 
 
 @router.post("/retrain")
-def retrain_dataset():
+def retrain_dataset(config: dict[str, Any] | None = None):
     if not os.path.exists(RAW_PATH):
-        raise HTTPException(status_code=404, detail="Raw dataset not found. Upload a CSV first.")
-    return {"status": "retrained", "training": _run_training()}
+        raise HTTPException(status_code=404, detail="Raw dataset not found. Upload a CSV or Excel file first.")
+
+    pipeline_config = save_pipeline_config(config or {}) if config else load_pipeline_config()
+    return {"status": "retrained", "config": pipeline_config, "training": _run_training(pipeline_config)}
 
 
-def _run_training():
+def _run_training(config: dict[str, Any]):
     try:
-        _, _, metrics = run_pipeline()
+        _, _, metrics = run_pipeline(config=config)
         data_service.reset()
         data_service.load()
         return {
@@ -108,6 +181,149 @@ def _run_training():
     except Exception as exc:
         data_service.reset()
         raise HTTPException(status_code=500, detail=f"Training failed: {exc}") from exc
+
+
+def _read_tabular_file(content: bytes, filename: str, preview_only: bool) -> pd.DataFrame:
+    extension = filename.lower().rsplit(".", 1)[-1] if "." in filename else "csv"
+    try:
+        if extension in {"xlsx", "xls"}:
+            return pd.read_excel(BytesIO(content), nrows=200 if preview_only else None)
+        if extension == "csv":
+            return pd.read_csv(BytesIO(content), nrows=200 if preview_only else None)
+    except Exception as exc:
+        raise HTTPException(status_code=400, detail=f"Could not read file: {exc}") from exc
+
+    raise HTTPException(status_code=400, detail="Supported files: CSV, XLSX and XLS.")
+
+
+def _infer_mapping(df: pd.DataFrame) -> dict[str, Any]:
+    columns = df.columns.tolist()
+    normalized_columns = {_normalize_name(column): column for column in columns}
+    mapping = {}
+    confidence = {}
+
+    for field, synonyms in FIELD_SYNONYMS.items():
+        match = None
+        score = 0.0
+        for synonym in synonyms:
+            if synonym in normalized_columns:
+                match = normalized_columns[synonym]
+                score = 1.0
+                break
+        if match is None:
+            match, score = _semantic_match(columns, synonyms)
+        if match:
+            mapping[field] = match
+            confidence[field] = round(score, 2)
+
+    return {"mapping": mapping, "confidence": confidence}
+
+
+def _semantic_match(columns: list[str], synonyms: list[str]) -> tuple[str | None, float]:
+    best_column = None
+    best_score = 0.0
+    for column in columns:
+        normalized = _normalize_name(column)
+        for synonym in synonyms:
+            if synonym in normalized or normalized in synonym:
+                score = min(len(synonym), len(normalized)) / max(len(synonym), len(normalized))
+                if score > best_score:
+                    best_column = column
+                    best_score = max(0.65, score)
+    return best_column, best_score
+
+
+def _normalize_dataset(df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFrame:
+    normalized = pd.DataFrame()
+    for field, target in CANONICAL_FIELDS.items():
+        source = mapping.get(field)
+        if source and source in df.columns:
+            normalized[target] = df[source]
+
+    if "Revenue" not in normalized.columns:
+        if "UnitPrice" not in normalized.columns:
+            raise HTTPException(status_code=400, detail="Mapping needs unit price or revenue.")
+        normalized["Revenue"] = pd.to_numeric(normalized["Quantity"], errors="coerce") * pd.to_numeric(normalized["UnitPrice"], errors="coerce")
+
+    if "UnitPrice" not in normalized.columns:
+        quantity = pd.to_numeric(normalized["Quantity"], errors="coerce").replace(0, pd.NA)
+        normalized["UnitPrice"] = pd.to_numeric(normalized["Revenue"], errors="coerce") / quantity
+
+    normalized["StockCode"] = normalized.get("StockCode", "Unknown")
+    normalized["Description"] = normalized.get("Description", "Unknown product")
+    normalized["Country"] = normalized.get("Country", "Unknown")
+    normalized["InvoiceDate"] = pd.to_datetime(normalized["InvoiceDate"], errors="coerce")
+
+    missing_columns = [CANONICAL_FIELDS[field] for field in REQUIRED_CANONICAL_FIELDS if CANONICAL_FIELDS[field] not in normalized.columns]
+    if missing_columns:
+        raise HTTPException(status_code=400, detail=f"Normalized dataset is missing columns: {missing_columns}")
+
+    return normalized
+
+
+def _profile_dataframe(df: pd.DataFrame, mapping: dict[str, str]) -> dict[str, Any]:
+    profile = {"rows": int(len(df)), "columns": int(len(df.columns)), "warnings": []}
+    for field, column in mapping.items():
+        if column not in df.columns:
+            continue
+        null_pct = float(df[column].isna().mean() * 100) if len(df) else 0.0
+        profile[field] = {
+            "column": column,
+            "null_pct": round(null_pct, 1),
+            "dtype": str(df[column].dtype),
+        }
+        if null_pct > 10:
+            profile["warnings"].append(f"{FIELD_LABELS.get(field, field)} has {null_pct:.1f}% missing values.")
+
+    date_column = mapping.get("invoice_date")
+    if date_column and date_column in df.columns:
+        parsed = pd.to_datetime(df[date_column], errors="coerce")
+        invalid_pct = float(parsed.isna().mean() * 100) if len(df) else 0.0
+        if invalid_pct > 10:
+            profile["warnings"].append(f"Invoice date has {invalid_pct:.1f}% invalid dates.")
+
+    return profile
+
+
+def _missing_fields(mapping: dict[str, str]) -> list[str]:
+    missing = [field for field in REQUIRED_CANONICAL_FIELDS if not mapping.get(field)]
+    if not mapping.get("unit_price") and not mapping.get("revenue"):
+        missing.append("unit_price_or_revenue")
+    return missing
+
+
+def _field_metadata() -> list[dict[str, Any]]:
+    fields = []
+    for field, target in CANONICAL_FIELDS.items():
+        fields.append(
+            {
+                "field": field,
+                "label": FIELD_LABELS[field],
+                "target_column": target,
+                "required": field in REQUIRED_CANONICAL_FIELDS or field in {"unit_price", "revenue"},
+                "synonyms": FIELD_SYNONYMS[field],
+            }
+        )
+    return fields
+
+
+def _parse_json_form(value: str | None, name: str) -> dict[str, Any] | None:
+    if not value:
+        return None
+    try:
+        return json.loads(value)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail=f"Invalid {name} JSON.") from exc
+
+
+def _merge_upload_config(current: dict[str, Any], update: dict[str, Any]) -> dict[str, Any]:
+    if not update:
+        return current
+    return deep_merge(current, update)
+
+
+def _normalize_name(value: str) -> str:
+    return re.sub(r"[^a-z0-9]", "", str(value).lower())
 
 
 def _file_info(path: str):

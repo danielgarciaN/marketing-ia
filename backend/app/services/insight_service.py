@@ -10,6 +10,7 @@ def generate_insights() -> list:
     customers = data_service.customers
     segments = data_service.segment_summary
     summary = data_service.dashboard_summary
+    currency = summary.get("source_currency", "GBP")
 
     insights = []
 
@@ -20,7 +21,7 @@ def generate_insights() -> list:
             "id": "vip_concentration",
             "category": "Revenue",
             "title": "VIP Revenue Concentration",
-            "insight": f"VIP Customers represent {vip['pct_customers']}% of the customer base but generate {vip['pct_revenue']}% of total revenue (£{vip['total_revenue']:,.0f}). Prioritize retention campaigns and exclusive benefits for this segment.",
+            "insight": f"VIP Customers represent {vip['pct_customers']}% of the customer base but generate {vip['pct_revenue']}% of total revenue ({currency} {vip['total_revenue']:,.0f}). Prioritize retention campaigns and exclusive benefits for this segment.",
             "priority": "Critical",
             "action": "Launch a VIP loyalty program with early access, premium support, and personalized offers.",
             "impact": "High",
@@ -33,7 +34,7 @@ def generate_insights() -> list:
             "id": "at_risk_alert",
             "category": "Retention",
             "title": "At-Risk Customer Alert",
-            "insight": f"{at_risk['count']} customers ({at_risk['pct_customers']}%) are at risk of churn. They have an average frequency of {at_risk['avg_frequency']:.1f} orders but haven't purchased in {at_risk['avg_recency']:.0f} days. Historical average spend: £{at_risk['avg_monetary']:,.0f}.",
+            "insight": f"{at_risk['count']} customers ({at_risk['pct_customers']}%) are at risk of churn. They have an average frequency of {at_risk['avg_frequency']:.1f} orders but haven't purchased in {at_risk['avg_recency']:.0f} days. Historical average spend: {currency} {at_risk['avg_monetary']:,.0f}.",
             "priority": "Critical",
             "action": "Deploy a reactivation campaign with personalized discounts (15-20%) and urgency-driven messaging within the next 7 days.",
             "impact": "High",
@@ -46,7 +47,7 @@ def generate_insights() -> list:
             "id": "new_conversion",
             "category": "Growth",
             "title": "New Customer Conversion Opportunity",
-            "insight": f"{new['count']} new customers have joined recently with an average order value of £{new['avg_order_value']:.0f}. The window to convert them into repeat buyers is typically 30 days.",
+            "insight": f"{new['count']} new customers have joined recently with an average order value of {currency} {new['avg_order_value']:.0f}. The window to convert them into repeat buyers is typically 30 days.",
             "priority": "High",
             "action": "Set up an automated onboarding email series with product recommendations and a second-purchase incentive.",
             "impact": "Medium",
@@ -59,7 +60,7 @@ def generate_insights() -> list:
             "id": "lost_recovery",
             "category": "Retention",
             "title": "Lost Customer Recovery Potential",
-            "insight": f"{lost['count']} customers are classified as lost ({lost['pct_customers']}% of total base). Their combined historical revenue was £{lost['total_revenue']:,.0f}. Even a 5% reactivation rate would recover £{lost['total_revenue'] * 0.05:,.0f}.",
+            "insight": f"{lost['count']} customers are classified as lost ({lost['pct_customers']}% of total base). Their combined historical revenue was {currency} {lost['total_revenue']:,.0f}. Even a 5% reactivation rate would recover {currency} {lost['total_revenue'] * 0.05:,.0f}.",
             "priority": "Medium",
             "action": "Run a win-back campaign with a strong incentive (25-30% discount or free shipping) as a last-effort recovery.",
             "impact": "Medium",
@@ -75,7 +76,7 @@ def generate_insights() -> list:
             "id": "revenue_trend",
             "category": "Revenue",
             "title": "Revenue Trend Analysis",
-            "insight": f"Revenue over the last 3 months is {trend} ({pct_change:+.1f}%). Latest month: £{last_3[-1]:,.0f}. The overall trend suggests {'positive momentum' if trend == 'growing' else 'the need for intervention to reverse the decline'}.",
+            "insight": f"Revenue over the last 3 months is {trend} ({pct_change:+.1f}%). Latest month: {currency} {last_3[-1]:,.0f}. The overall trend suggests {'positive momentum' if trend == 'growing' else 'the need for intervention to reverse the decline'}.",
             "priority": "High" if trend == "declining" else "Medium",
             "action": f"{'Scale up successful campaigns and increase acquisition spend.' if trend == 'growing' else 'Investigate churn drivers. Consider promotional campaigns targeting At-Risk and Occasional segments.'}",
             "impact": "High",
@@ -88,7 +89,7 @@ def generate_insights() -> list:
             "id": "high_potential_upsell",
             "category": "Growth",
             "title": "High Potential Upsell Opportunity",
-            "insight": f"{hp['count']} customers show high potential with an average spend of £{hp['avg_monetary']:,.0f} and good recency ({hp['avg_recency']:.0f} days). Cross-selling and upselling strategies could increase their lifetime value significantly.",
+            "insight": f"{hp['count']} customers show high potential with an average spend of {currency} {hp['avg_monetary']:,.0f} and good recency ({hp['avg_recency']:.0f} days). Cross-selling and upselling strategies could increase their lifetime value significantly.",
             "priority": "High",
             "action": "Implement personalized product recommendations and bundle offers for this segment.",
             "impact": "High",

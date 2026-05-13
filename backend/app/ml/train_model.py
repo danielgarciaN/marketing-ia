@@ -8,11 +8,16 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from app.ml.clustering import run_clustering_pipeline
 from app.ml.preprocess import clean_data, load_raw_data, save_processed
 from app.ml.rfm import build_rfm_table
+from app.services.pipeline_config_service import load_pipeline_config
 
 PROCESSED_DIR = os.path.join(os.path.dirname(__file__), "..", "data", "processed")
 
 
-def run_pipeline():
+def run_pipeline(config: dict | None = None):
+    config = config or load_pipeline_config()
+    rfm_config = config.get("rfm", {})
+    clustering_config = config.get("clustering", {})
+
     print("=" * 60)
     print("AI Marketing Intelligence Platform - Training Pipeline")
     print("=" * 60)
@@ -23,12 +28,13 @@ def run_pipeline():
     save_processed(df)
 
     print("\nStep 2: Building RFM table...")
-    rfm = build_rfm_table(df)
+    rfm = build_rfm_table(df, config=rfm_config)
     print(f"  RFM table: {len(rfm)} customers")
     print(f"  Segments: {rfm['Segment'].value_counts().to_dict()}")
 
     print("\nStep 3: Running clustering pipeline...")
-    rfm, interpretations, metrics = run_clustering_pipeline(rfm, n_clusters=5)
+    n_clusters = None if clustering_config.get("auto_select_k") else clustering_config.get("n_clusters", 5)
+    rfm, interpretations, metrics = run_clustering_pipeline(rfm, n_clusters=n_clusters)
     print(f"  Clusters: {rfm['Cluster'].value_counts().sort_index().to_dict()}")
     print(f"  Silhouette Score: {metrics['silhouette_score']}")
 
@@ -48,6 +54,8 @@ def run_pipeline():
     metrics_out["eval_k"] = metrics["eval_results"]["k"]
     metrics_out["eval_silhouette"] = metrics["eval_results"]["silhouette"]
     metrics_out["eval_inertia"] = metrics["eval_results"]["inertia"]
+    metrics_out["rfm_config"] = rfm_config
+    metrics_out["clustering_config"] = clustering_config
 
     metrics_path = os.path.join(PROCESSED_DIR, "model_metrics.json")
     with open(metrics_path, "w") as f:
@@ -60,9 +68,11 @@ def run_pipeline():
         "total_orders": int(df["InvoiceNo"].nunique()),
         "avg_order_value": round(float(df.groupby("InvoiceNo")["Revenue"].sum().mean()), 2),
         "avg_frequency": round(float(rfm["Frequency"].mean()), 2),
-        "active_customers": int((rfm["Recency"] <= 30).sum()),
-        "inactive_customers": int((rfm["Recency"] > 180).sum()),
+        "active_customers": int((rfm["Recency"] <= rfm_config.get("active_days", 30)).sum()),
+        "inactive_customers": int((rfm["Recency"] > rfm_config.get("inactive_days", 180)).sum()),
         "top_country": df["Country"].mode().iloc[0],
+        "source_currency": config.get("source", {}).get("source_currency", "GBP"),
+        "rfm_weights": rfm_config.get("weights", {}),
         "date_range": {
             "start": str(df["InvoiceDate"].min().date()),
             "end": str(df["InvoiceDate"].max().date()),

@@ -79,13 +79,16 @@ Data / Datos
 
 Desde esa pantalla puedes:
 
-1. Seleccionar un archivo CSV.
-2. Decidir si quieres reentrenar automaticamente despues de subirlo.
-3. Subir el dataset.
-4. Ver el estado del dataset raw y los datos procesados.
-5. Reentrenar manualmente el dataset actual.
+1. Seleccionar un archivo CSV o Excel.
+2. Ver una inferencia automatica de columnas.
+3. Corregir el mapping si tu export usa nombres distintos.
+4. Ajustar pesos RFM, dias activo/inactivo y numero de clusters.
+5. Decidir si quieres reentrenar automaticamente despues de subirlo.
+6. Subir el dataset.
+7. Ver el estado del dataset raw y los datos procesados.
+8. Reentrenar manualmente el dataset actual.
 
-El CSV debe tener estas columnas:
+La plataforma normaliza internamente a estas columnas:
 
 ```text
 InvoiceNo
@@ -96,21 +99,44 @@ InvoiceDate
 UnitPrice
 CustomerID
 Country
+Revenue
 ```
 
-Cuando subes un CSV con `Retrain after upload` activado, el backend hace esto:
+Tu archivo no tiene que usar exactamente esos nombres. Por ejemplo, puede tener `order_id`, `created_at`, `customer_email`, `sku`, `qty` o `total_price`. La pantalla de Datos intentara mapearlos automaticamente.
 
-1. Valida que el archivo tenga las columnas requeridas.
-2. Guarda el CSV en `backend/app/data/raw/online_retail.csv`.
-3. Ejecuta el pipeline completo de entrenamiento.
-4. Regenera los CSV/JSON procesados.
-5. Recarga los datos en memoria.
-6. El frontend refresca el dashboard.
+Campos minimos:
+
+- ID de pedido o factura.
+- ID de cliente o email.
+- Fecha de compra.
+- Cantidad.
+- Precio unitario o revenue total.
+
+Campos opcionales que mejoran el analisis:
+
+- SKU o producto.
+- Descripcion de producto.
+- Pais o mercado.
+
+Cuando subes un archivo con `Retrain after upload` activado, el backend hace esto:
+
+1. Lee CSV/XLSX.
+2. Detecta columnas y tipos de datos.
+3. Aplica el mapping elegido en el portal.
+4. Normaliza el dataset al esquema interno.
+5. Guarda el CSV canonico en `backend/app/data/raw/online_retail.csv`.
+6. Ejecuta el pipeline completo de entrenamiento.
+7. Regenera los CSV/JSON procesados.
+8. Recarga los datos en memoria.
+9. El frontend refresca el dashboard.
 
 Endpoints usados:
 
 ```text
 GET  /data/status
+GET  /data/config
+POST /data/config
+POST /data/infer-schema
 POST /data/upload
 POST /data/retrain
 ```
@@ -121,14 +147,25 @@ Tambien puedes probarlos desde:
 http://localhost:8000/docs
 ```
 
-## Que pasa si mi CSV tiene otras columnas
+## RFM configurable
 
-Si tu dataset usa otros nombres, por ejemplo `order_id` en vez de `InvoiceNo`, tienes dos opciones:
+En la pantalla `Data / Datos` puedes ajustar:
 
-1. Renombrar las columnas en el CSV antes de subirlo.
-2. Adaptar el backend para aceptar un mapeo de columnas.
+- Peso de Recency.
+- Peso de Frequency.
+- Peso de Monetary.
+- Dias para considerar un cliente activo.
+- Dias para considerar un cliente inactivo.
+- Numero de clusters KMeans.
+- Auto-seleccion de `k` por silhouette.
 
-La version actual espera el esquema tipo Online Retail para mantener el pipeline simple y reproducible.
+Esto permite adaptar el modelo a distintos negocios. Por ejemplo:
+
+- Ecommerce de moda: dar mas peso a recency porque la recompra reciente importa mucho.
+- B2B: dar mas peso a monetary porque hay menos pedidos pero tickets altos.
+- Suscripcion o consumibles: dar mas peso a frequency para detectar recurrencia.
+
+Cuando cambias estos valores y pulsas `Reentrenar dataset actual`, se regeneran segmentos, KPIs, clusters, insights y simulador sobre la nueva configuracion.
 
 ## Como regenerar datos y modelo desde terminal
 
@@ -214,10 +251,15 @@ Muestra KPIs ejecutivos:
 
 Sirve para gestionar el dataset:
 
-- Subir un nuevo CSV.
+- Subir un nuevo CSV o Excel.
+- Detectar columnas automaticamente.
+- Corregir mapping de columnas.
+- Configurar pesos RFM.
+- Configurar dias activo/inactivo.
+- Configurar clusters KMeans.
 - Reentrenar el pipeline.
 - Ver estado de dataset raw y procesado.
-- Consultar columnas requeridas.
+- Consultar columnas internas del modelo.
 - Cambiar visualizacion GBP/EUR.
 
 ### Customers / Clientes
@@ -297,6 +339,9 @@ Resume el enfoque tecnico:
 
 ```text
 GET  /data/status
+GET  /data/config
+POST /data/config
+POST /data/infer-schema
 POST /data/upload
 POST /data/retrain
 GET  /dashboard/summary

@@ -21,12 +21,14 @@ export function ClusterScatterPlot({
   subtitle,
   revenueLabel,
   currency,
+  sourceCurrency = "GBP",
 }: {
   points: ClusterPoint[];
   title: string;
   subtitle: string;
   revenueLabel: string;
   currency: Currency;
+  sourceCurrency?: Currency;
 }) {
   const clusters = Array.from(new Set(points.map((point) => point.Cluster))).sort((a, b) => a - b);
 
@@ -45,7 +47,7 @@ export function ClusterScatterPlot({
             <Tooltip
               cursor={{ strokeDasharray: "3 3" }}
               formatter={(value, name) => {
-                if (name === "Monetary") return [formatCurrency(Number(value), currency), revenueLabel];
+                if (name === "Monetary") return [formatCurrency(Number(value), currency, sourceCurrency), revenueLabel];
                 return [Number(value).toFixed(2), name];
               }}
             />

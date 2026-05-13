@@ -22,12 +22,13 @@ The platform provides:
 - REST API with Swagger documentation.
 - Frontend dashboard connected to the backend API.
 - Bilingual portal UI with English and Spanish mode.
-- Dataset upload and retraining from the portal.
+- Flexible dataset upload, AI-style column mapping and retraining from the portal.
+- Configurable RFM weights, active/inactive windows and KMeans cluster count.
 - GBP/EUR currency display switch.
 
 ## Dataset
 
-The project uses a synthetic ecommerce dataset generated with the same schema as the Online Retail dataset:
+The project includes a synthetic ecommerce dataset generated with the same schema as the Online Retail dataset:
 
 - InvoiceNo
 - StockCode
@@ -43,6 +44,8 @@ The generator creates realistic customers, transactions, returns, missing custom
 ```text
 backend/app/data/raw/online_retail.csv
 ```
+
+The portal can also ingest external CSV/XLSX exports. It infers columns such as order ID, customer ID, date, quantity, unit price, revenue, SKU and country, then normalizes them into the internal schema used by the pipeline.
 
 ## Architecture
 
@@ -155,8 +158,11 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 | --- | --- | --- |
 | GET | `/dashboard/summary` | Business KPIs |
 | GET | `/data/status` | Raw/processed dataset status |
-| POST | `/data/upload` | Upload a new CSV and optionally retrain |
-| POST | `/data/retrain` | Rebuild the pipeline from the current raw CSV |
+| GET | `/data/config` | Current dataset, RFM and clustering configuration |
+| POST | `/data/config` | Save dataset/RFM/clustering configuration |
+| POST | `/data/infer-schema` | Infer column mapping and quality warnings from CSV/XLSX |
+| POST | `/data/upload` | Upload a new dataset with optional mapping/config and retraining |
+| POST | `/data/retrain` | Rebuild the pipeline from the current raw dataset |
 | GET | `/dashboard/revenue` | Monthly revenue |
 | GET | `/customers` | Paginated customer table |
 | GET | `/customers/{id}` | Customer detail |
@@ -179,11 +185,12 @@ The current generated dataset contains around 126k transaction rows and roughly 
 - Insights are rules-based rather than generated with an external LLM.
 - CSV files are used for the MVP instead of a database.
 - Campaign simulator uses assumptions for conversion uplift and channel costs.
+- Flexible ingestion is file-based; native Shopify/HubSpot/Stripe API connectors are roadmap items.
 
 ## Next Steps
 
 - Add authentication and workspace-level tenant separation.
 - Persist data in PostgreSQL or Supabase.
-- Connect to a real ecommerce source such as Shopify.
+- Connect to real ecommerce/CRM sources such as Shopify, WooCommerce, HubSpot, Klaviyo and Stripe.
 - Add LLM-generated insight narratives with human approval.
 - Deploy frontend to Vercel and backend to Render or Railway.

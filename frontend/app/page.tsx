@@ -177,9 +177,9 @@ export default function Home() {
         {!data && !error ? <LoadingState locale={locale} /> : null}
         {data ? (
           <>
-            {activeView === "overview" ? <Overview data={data} locale={locale} currency={currency} /> : null}
+            {activeView === "overview" ? <Overview data={data} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
             {activeView === "data" ? <DataManager labels={t.data} currency={currency} setCurrency={setCurrency} onRefresh={loadData} /> : null}
-            {activeView === "customers" ? <Customers data={data} locale={locale} currency={currency} /> : null}
+            {activeView === "customers" ? <Customers data={data} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
             {activeView === "segments" ? (
               <Segments
                 segments={data.segments}
@@ -189,11 +189,12 @@ export default function Home() {
                 onSelect={setSelectedSegment}
                 locale={locale}
                 currency={currency}
+                sourceCurrency={sourceCurrency(data)}
               />
             ) : null}
-            {activeView === "clustering" ? <Clustering data={data} locale={locale} currency={currency} /> : null}
-            {activeView === "campaigns" ? <Campaigns data={data} locale={locale} currency={currency} /> : null}
-            {activeView === "insights" ? <Insights insights={data.insights} locale={locale} currency={currency} /> : null}
+            {activeView === "clustering" ? <Clustering data={data} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
+            {activeView === "campaigns" ? <Campaigns data={data} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
+            {activeView === "insights" ? <Insights insights={data.insights} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
             {activeView === "methodology" ? <Methodology data={data} locale={locale} /> : null}
           </>
         ) : null}
@@ -202,16 +203,20 @@ export default function Home() {
   );
 }
 
-function Overview({ data, locale, currency }: { data: AppData; locale: Locale; currency: Currency }) {
+function sourceCurrency(data: AppData): Currency {
+  return data.summary.source_currency === "EUR" ? "EUR" : "GBP";
+}
+
+function Overview({ data, locale, currency, sourceCurrency }: { data: AppData; locale: Locale; currency: Currency; sourceCurrency: Currency }) {
   const summary = data.summary;
   const t = copy[locale];
   return (
     <div className="view-stack">
       <section className="metrics-grid">
         <DashboardCard label={t.overview.totalCustomers} value={summary.total_customers.toLocaleString()} detail={t.overview.rfmProfiles} tone="blue" />
-        <DashboardCard label={t.overview.revenue} value={formatCurrency(summary.total_revenue, currency)} detail={t.overview.cleanedTransactions} tone="green" />
+        <DashboardCard label={t.overview.revenue} value={formatCurrency(summary.total_revenue, currency, sourceCurrency)} detail={t.overview.cleanedTransactions} tone="green" />
         <DashboardCard label={t.overview.orders} value={summary.total_orders.toLocaleString()} detail={t.overview.uniqueInvoices} tone="cyan" />
-        <DashboardCard label={t.overview.avgOrderValue} value={formatCurrency(summary.avg_order_value, currency)} detail={t.overview.perInvoice} tone="orange" />
+        <DashboardCard label={t.overview.avgOrderValue} value={formatCurrency(summary.avg_order_value, currency, sourceCurrency)} detail={t.overview.perInvoice} tone="orange" />
         <DashboardCard label={t.overview.activeCustomers} value={summary.active_customers.toLocaleString()} detail={t.overview.activeDetail} tone="green" />
         <DashboardCard label={t.overview.inactiveCustomers} value={summary.inactive_customers.toLocaleString()} detail={t.overview.inactiveDetail} tone="red" />
       </section>
@@ -221,6 +226,7 @@ function Overview({ data, locale, currency }: { data: AppData; locale: Locale; c
         subtitle={t.revenueChart.periods}
         tooltipLabel={t.revenueChart.tooltip}
         currency={currency}
+        sourceCurrency={sourceCurrency}
       />
       <section className="two-column">
         <div className="chart-panel">
@@ -236,7 +242,7 @@ function Overview({ data, locale, currency }: { data: AppData; locale: Locale; c
                     <Cell key={index} fill={segmentColors[index % segmentColors.length]} />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value) => [formatCurrency(Number(value), currency), t.overview.revenue]} />
+                <Tooltip formatter={(value) => [formatCurrency(Number(value), currency, sourceCurrency), t.overview.revenue]} />
               </PieChart>
             </ResponsiveContainer>
           </div>
@@ -273,7 +279,7 @@ function Overview({ data, locale, currency }: { data: AppData; locale: Locale; c
   );
 }
 
-function Customers({ data, locale, currency }: { data: AppData; locale: Locale; currency: Currency }) {
+function Customers({ data, locale, currency, sourceCurrency }: { data: AppData; locale: Locale; currency: Currency; sourceCurrency: Currency }) {
   const t = copy[locale];
   return (
     <div className="view-stack">
@@ -283,7 +289,7 @@ function Customers({ data, locale, currency }: { data: AppData; locale: Locale; 
           {data.customers.total.toLocaleString()} {t.customers.available}
         </span>
       </div>
-      <CustomerTable customers={data.customers.data} locale={locale} labels={t.customers} currency={currency} />
+      <CustomerTable customers={data.customers.data} locale={locale} labels={t.customers} currency={currency} sourceCurrency={sourceCurrency} />
     </div>
   );
 }
@@ -296,6 +302,7 @@ function Segments({
   onSelect,
   locale,
   currency,
+  sourceCurrency,
 }: {
   segments: SegmentSummary[];
   selectedSegment: string | null;
@@ -304,6 +311,7 @@ function Segments({
   onSelect: (segment: string) => void;
   locale: Locale;
   currency: Currency;
+  sourceCurrency: Currency;
 }) {
   const t = copy[locale];
   return (
@@ -319,6 +327,7 @@ function Segments({
             revenueLabel={t.segments.revenueLabel}
             shareLabel={t.segments.share}
             currency={currency}
+            sourceCurrency={sourceCurrency}
           />
         ))}
       </section>
@@ -336,7 +345,7 @@ function Segments({
             </div>
             <div>
               <span>{t.segments.revenue}</span>
-              <strong>{formatCurrency(selectedSegmentData.total_revenue, currency)}</strong>
+              <strong>{formatCurrency(selectedSegmentData.total_revenue, currency, sourceCurrency)}</strong>
             </div>
             <div>
               <span>{t.segments.avgRecency}</span>
@@ -364,7 +373,7 @@ function Segments({
   );
 }
 
-function Clustering({ data, locale, currency }: { data: AppData; locale: Locale; currency: Currency }) {
+function Clustering({ data, locale, currency, sourceCurrency }: { data: AppData; locale: Locale; currency: Currency; sourceCurrency: Currency }) {
   const t = copy[locale];
   return (
     <div className="view-stack">
@@ -373,16 +382,16 @@ function Clustering({ data, locale, currency }: { data: AppData; locale: Locale;
         <DashboardCard label={t.clustering.silhouette} value={String(data.metrics.silhouette_score)} detail={t.clustering.clusterSeparation} tone="green" />
         <DashboardCard label={t.clustering.inertia} value={formatNumber(data.metrics.inertia)} detail={t.clustering.variance} tone="orange" />
       </section>
-      <ClusterScatterPlot points={data.clusterPoints} title={t.clustering.title} subtitle={t.clustering.subtitle} revenueLabel={t.clustering.revenue} currency={currency} />
+      <ClusterScatterPlot points={data.clusterPoints} title={t.clustering.title} subtitle={t.clustering.subtitle} revenueLabel={t.clustering.revenue} currency={currency} sourceCurrency={sourceCurrency} />
     </div>
   );
 }
 
-function Campaigns({ data, locale, currency }: { data: AppData; locale: Locale; currency: Currency }) {
+function Campaigns({ data, locale, currency, sourceCurrency }: { data: AppData; locale: Locale; currency: Currency; sourceCurrency: Currency }) {
   const t = copy[locale];
   return (
     <div className="view-stack">
-      <CampaignSimulator segments={data.segments} locale={locale} labels={t.campaigns} currency={currency} />
+      <CampaignSimulator segments={data.segments} locale={locale} labels={t.campaigns} currency={currency} sourceCurrency={sourceCurrency} />
       <section className="campaign-list">
         {data.recommendations.map((recommendation) => (
           <article key={recommendation.segment}>
@@ -396,12 +405,12 @@ function Campaigns({ data, locale, currency }: { data: AppData; locale: Locale; 
   );
 }
 
-function Insights({ insights, locale, currency }: { insights: Insight[]; locale: Locale; currency: Currency }) {
+function Insights({ insights, locale, currency, sourceCurrency }: { insights: Insight[]; locale: Locale; currency: Currency; sourceCurrency: Currency }) {
   const t = copy[locale];
   return (
     <section className="insight-grid">
       {insights.map((insight) => (
-        <InsightCard key={insight.id} insight={insight} locale={locale} actionLabel={t.insights.action} impactLabel={t.insights.impact} currency={currency} />
+        <InsightCard key={insight.id} insight={insight} locale={locale} actionLabel={t.insights.action} impactLabel={t.insights.impact} currency={currency} sourceCurrency={sourceCurrency} />
       ))}
     </section>
   );

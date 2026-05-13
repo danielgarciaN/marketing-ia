@@ -19,12 +19,14 @@ export function RevenueChart({
   subtitle,
   tooltipLabel,
   currency,
+  sourceCurrency = "GBP",
 }: {
   data: RevenuePoint[];
   title: string;
   subtitle: string;
   tooltipLabel: string;
   currency: Currency;
+  sourceCurrency?: Currency;
 }) {
   return (
     <div className="chart-panel">
@@ -45,8 +47,8 @@ export function RevenueChart({
             </defs>
             <CartesianGrid stroke="#E5E0D8" strokeDasharray="3 3" />
             <XAxis dataKey="month" tick={{ fontSize: 12 }} />
-            <YAxis tickFormatter={(value) => formatCurrency(Number(value), currency)} tick={{ fontSize: 12 }} width={70} />
-            <Tooltip formatter={(value) => [formatCurrency(Number(value), currency), tooltipLabel]} />
+            <YAxis tickFormatter={(value) => formatCurrency(Number(value), currency, sourceCurrency)} tick={{ fontSize: 12 }} width={70} />
+            <Tooltip formatter={(value) => [formatCurrency(Number(value), currency, sourceCurrency), tooltipLabel]} />
             <Area dataKey="revenue" type="monotone" stroke="#2B5D7E" strokeWidth={2} fill="url(#revenueFill)" />
           </AreaChart>
         </ResponsiveContainer>

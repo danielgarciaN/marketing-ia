@@ -7,6 +7,7 @@ export type DashboardSummary = {
   active_customers: number;
   inactive_customers: number;
   top_country: string;
+  source_currency?: string;
   date_range?: { start: string; end: string };
 };
 
@@ -123,9 +124,59 @@ export type DataStatus = {
     modified_at?: number;
   };
   required_columns: string[];
+  required_fields?: DataFieldMetadata[];
+  config?: PipelineConfig;
   loaded_in_memory: boolean;
   customer_count?: number;
   segments?: string[];
+};
+
+export type DataFieldMetadata = {
+  field: string;
+  label: string;
+  target_column: string;
+  required: boolean;
+  synonyms: string[];
+};
+
+export type PipelineConfig = {
+  source: {
+    filename: string;
+    source_currency: string;
+    column_mapping: Record<string, string>;
+  };
+  rfm: {
+    score_quantiles: number;
+    weights: {
+      recency: number;
+      frequency: number;
+      monetary: number;
+    };
+    active_days: number;
+    inactive_days: number;
+    new_customer_max_frequency: number;
+    segment_thresholds: Record<string, { r: number; f: number; m: number }>;
+  };
+  clustering: {
+    n_clusters: number;
+    auto_select_k: boolean;
+  };
+};
+
+export type SchemaInference = {
+  filename: string;
+  columns: string[];
+  sample_rows: Record<string, unknown>[];
+  mapping: Record<string, string>;
+  confidence: Record<string, number>;
+  missing_fields: string[];
+  field_metadata: DataFieldMetadata[];
+  quality: {
+    rows: number;
+    columns: number;
+    warnings: string[];
+    [key: string]: unknown;
+  };
 };
 
 export type DataUploadResult = {
@@ -133,6 +184,10 @@ export type DataUploadResult = {
   filename?: string;
   bytes?: number;
   raw_path?: string;
+  rows?: number;
+  mapping?: Record<string, string>;
+  config?: PipelineConfig;
+  quality?: Record<string, unknown>;
   retrained?: boolean;
   training?: {
     n_clusters: number;

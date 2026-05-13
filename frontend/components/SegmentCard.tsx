@@ -12,6 +12,7 @@ export function SegmentCard({
   revenueLabel,
   shareLabel,
   currency,
+  sourceCurrency = "GBP",
 }: {
   segment: SegmentSummary;
   selected: boolean;
@@ -20,6 +21,7 @@ export function SegmentCard({
   revenueLabel: string;
   shareLabel: string;
   currency: Currency;
+  sourceCurrency?: Currency;
 }) {
   return (
     <button className={`segment-card ${selected ? "is-selected" : ""}`} onClick={() => onSelect(segment.segment)}>
@@ -27,7 +29,7 @@ export function SegmentCard({
       <span className="segment-name">{segmentLabel(segment.segment, locale)}</span>
       <strong>{segment.count.toLocaleString()}</strong>
       <small>
-        {formatCurrency(segment.total_revenue, currency)} {revenueLabel} - {segment.pct_revenue}% {shareLabel}
+        {formatCurrency(segment.total_revenue, currency, sourceCurrency)} {revenueLabel} - {segment.pct_revenue}% {shareLabel}
       </small>
     </button>
   );
