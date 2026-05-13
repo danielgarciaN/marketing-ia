@@ -1,0 +1,58 @@
+"use client";
+
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import type { RevenuePoint } from "@/lib/types";
+
+const currency = new Intl.NumberFormat("en-GB", {
+  style: "currency",
+  currency: "GBP",
+  maximumFractionDigits: 0,
+});
+
+export function RevenueChart({
+  data,
+  title,
+  subtitle,
+  tooltipLabel,
+}: {
+  data: RevenuePoint[];
+  title: string;
+  subtitle: string;
+  tooltipLabel: string;
+}) {
+  return (
+    <div className="chart-panel">
+      <div className="section-heading">
+        <h2>{title}</h2>
+        <span>
+          {data.length} {subtitle}
+        </span>
+      </div>
+      <div className="chart-height">
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={data}>
+            <defs>
+              <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#2B5D7E" stopOpacity={0.24} />
+                <stop offset="100%" stopColor="#22D3EE" stopOpacity={0.02} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid stroke="#E5E0D8" strokeDasharray="3 3" />
+            <XAxis dataKey="month" tick={{ fontSize: 12 }} />
+            <YAxis tickFormatter={(value) => `${Math.round(Number(value) / 1000)}k`} tick={{ fontSize: 12 }} width={48} />
+            <Tooltip formatter={(value) => [currency.format(Number(value)), tooltipLabel]} />
+            <Area dataKey="revenue" type="monotone" stroke="#2B5D7E" strokeWidth={2} fill="url(#revenueFill)" />
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}

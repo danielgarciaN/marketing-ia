@@ -1,0 +1,14 @@
+{
+  "total_customers": 1984,
+  "total_revenue": 1347358.54,
+  "total_orders": 15243,
+  "avg_order_value": 88.39,
+  "avg_frequency": 7.68,
+  "active_customers": 881,
+  "inactive_customers": 299,
+  "top_country": "United Kingdom",
+  "date_range": {
+    "start": "2010-12-01",
+    "end": "2011-12-08"
+  }
+}
