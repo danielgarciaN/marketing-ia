@@ -1,201 +1,434 @@
 # AI Marketing Intelligence Platform
 
-End-to-end customer intelligence platform for ecommerce marketing teams.
+**Enterprise-grade customer intelligence platform powered by a LangGraph multiagent AI system.**
 
-The project combines data cleaning, RFM analysis, customer segmentation, KMeans clustering, campaign recommendations, automatic business insights, a FastAPI backend and a Next.js dashboard. It is designed as a portfolio-ready SaaS case study, not as a notebook-only exercise.
+Transforms raw ecommerce transaction data into actionable marketing strategy through autonomous AI agents, RAG-backed knowledge retrieval, and data-driven campaign simulation.
 
-## Business Problem
+---
 
-Marketing and CRM teams need to understand who their best customers are, which users are at risk of churn, what segments drive revenue and what campaigns should be launched next. This platform turns transactional ecommerce data into actionable decisions.
+## What This Is
 
-## Solution
+A production-ready SaaS platform that combines classical ML analytics with a modern multiagent AI layer:
 
-The platform provides:
+| Layer | Technology | Purpose |
+|-------|-----------|---------|
+| **Analytics** | Pandas · Scikit-learn | RFM scoring, KMeans clustering, segment KPIs |
+| **API** | FastAPI · Pydantic v2 | REST endpoints for dashboard and analytics |
+| **AI Agents** | LangGraph · LangChain | Autonomous reasoning and orchestration |
+| **RAG** | Qdrant · OpenAI Embeddings | Marketing knowledge retrieval with citations |
+| **Frontend** | Next.js · Recharts | Interactive dashboards and campaign simulator |
 
-- Executive dashboard with KPIs and revenue trend.
-- RFM customer scoring: Recency, Frequency and Monetary value.
-- Business segments: VIP, Loyal, New, At-Risk, Lost, Occasional and High Potential.
-- KMeans clustering with PCA coordinates for visualization.
-- Campaign recommendations per segment.
-- Campaign simulator with estimated revenue, conversions, ROI and uplift.
-- Rules-based AI-style insights focused on retention, revenue and growth.
-- REST API with Swagger documentation.
-- Frontend dashboard connected to the backend API.
-- Bilingual portal UI with English and Spanish mode.
-- Data Management Center with uploaded dataset library, active/inactive datasets, deletion and retraining.
-- Flexible dataset upload, AI-style silent column mapping and fallback manual mapping only when review is needed.
-- Configurable RFM weights, active/inactive windows and KMeans cluster count.
-- GBP/EUR currency display switch.
+---
 
-## Dataset
+## Architecture Overview
 
-The project includes a synthetic ecommerce dataset generated with the same schema as the Online Retail dataset:
-
-- InvoiceNo
-- StockCode
-- Description
-- Quantity
-- InvoiceDate
-- UnitPrice
-- CustomerID
-- Country
-
-The generator creates realistic customers, transactions, returns, missing customer IDs and international markets. The raw CSV lives in:
-
-```text
-backend/app/data/raw/online_retail.csv
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    FASTAPI APPLICATION (v2.0)                        │
+│                                                                       │
+│  /dashboard  /customers  /segments  /campaigns  /insights  /model    │
+│                         ↓ NEW                                        │
+│              ┌──────────────────────────┐                            │
+│              │    /ai  — AI Layer        │                            │
+│              │  POST /ai/query           │                            │
+│              │  POST /ai/report          │                            │
+│              │  POST /ai/recommendations │                            │
+│              │  GET  /ai/conversations   │                            │
+│              │  GET  /ai/traces          │                            │
+│              │  POST /ai/rag/ingest      │                            │
+│              └──────────┬───────────────┘                            │
+└─────────────────────────┼───────────────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────────────┐
+│                   LANGGRAPH MULTIAGENT ENGINE                         │
+│                                                                       │
+│   START ──► SUPERVISOR ─────────────────────────────────────────┐   │
+│                │                                                  │   │
+│                │ Command(goto=next_agent)                         │   │
+│                ▼                                                  │   │
+│   ┌────────────────────────────────────────────────────────┐     │   │
+│   │                    WORKER AGENTS                        │     │   │
+│   │                                                         │     │   │
+│   │  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐  │     │   │
+│   │  │ DATA ANALYST │  │ SQL/PANDAS  │  │ RAG KNOWLEDGE │  │     │   │
+│   │  │ KPIs·trends  │  │queries·filt │  │best practices │  │     │   │
+│   │  │ segments·RFM │  │ers·metrics  │  │benchmarks·CRM │  │     │   │
+│   │  └──────────────┘  └─────────────┘  └───────────────┘  │     │   │
+│   │                                                         │     │   │
+│   │  ┌──────────────┐  ┌─────────────┐                     │     │   │
+│   │  │  CAMPAIGN    │  │ FORECASTING │                     │     │   │
+│   │  │  STRATEGY    │  │revenue·LTV  │                     │     │   │
+│   │  │  ROI·budget  │  │churn·trends │                     │     │   │
+│   │  └──────────────┘  └─────────────┘                     │     │   │
+│   └────────────────────────┬───────────────────────────────┘     │   │
+│                             │ Command(goto="supervisor")           │   │
+│                             └──────────────────────────────────────┘   │
+│                                      │ (when done)                    │
+│                                      ▼                                │
+│                          ┌───────────────────┐                       │
+│                          │ INSIGHT NARRATOR   │                       │
+│                          │ executive summary  │                       │
+│                          │ business language  │                       │
+│                          └─────────┬─────────┘                       │
+│                                    │                                  │
+│                                   END                                │
+└─────────────────────────────────────────────────────────────────────┘
+                          │
+                          ▼
+              ┌───────────────────────┐
+              │   QDRANT VECTOR DB    │
+              │ marketing_knowledge   │
+              │ CRM playbooks · PDFs  │
+              │ campaign guides · MD  │
+              └───────────────────────┘
 ```
 
-The portal can also ingest external CSV/XLSX exports. It infers columns such as order ID, customer ID, date, quantity, unit price, revenue, SKU and country, then normalizes them into the internal schema used by the pipeline. Uploaded datasets are stored in a local registry and only active datasets feed the dashboard.
+---
 
-## Architecture
+## How LangGraph Works Here
 
-```text
-frontend/                  Next.js SaaS dashboard
-  app/
-  components/
-  lib/
+LangGraph is a graph execution framework for building stateful, multi-step AI workflows.
 
-backend/                   FastAPI + Data Science pipeline
-  app/
-    api/                   REST routes
-    services/              Business logic
-    ml/                    Preprocess, RFM, clustering, training
-    data/                  Raw and processed CSV/JSON outputs
-    artifacts/             Scaler, KMeans and PCA joblib files
+**Key concepts used in this project:**
+
+- **StateGraph** — a directed graph where each node is an agent function
+- **AgentState** — a shared TypedDict that all agents read from and write to
+- **Command(goto=...)** — agents return routing instructions, not just data
+- **Conditional edges** — the supervisor decides the next node at every step
+- **add_messages** reducer — messages accumulate safely across parallel runs
+
+**Why LangGraph instead of a simple chain?**
+
+| Problem | LangGraph solution |
+|---------|-------------------|
+| Complex routing logic | Conditional edges + supervisor pattern |
+| State shared across agents | Single `AgentState` TypedDict |
+| Tool use per agent | `create_react_agent` with typed tools |
+| Safety / loops | `recursion_limit` + `iteration_count` guard |
+| Observability | `execution_trace` built into state |
+
+---
+
+## Agents
+
+### Supervisor
+Routes every query to the right sequence of agents. Uses structured LLM output (`RoutingDecision`) to classify intent and decide the next node. Enforces the max-iteration safety limit.
+
+**Intents classified:** `analytics` · `segmentation` · `campaign` · `forecast` · `knowledge` · `report` · `general`
+
+### Data Analyst
+Retrieves KPIs, segment summaries, revenue trends, and RFM distributions via tool calls against the existing DataService.
+
+**Tools:** `get_dashboard_summary` · `get_segment_overview` · `compute_segment_stats` · `get_revenue_trend`
+
+### SQL/Pandas Agent
+Executes dynamic Pandas query expressions against the customer dataset. Enables ad-hoc filtering without hardcoded queries.
+
+**Tools:** `run_pandas_query` · `get_rfm_distribution` · `get_customer_by_id`
+
+### RAG Knowledge Agent
+Retrieves relevant marketing knowledge from Qdrant. Surfaces CRM playbooks, campaign guides, and benchmarks with source citations.
+
+**Tools:** `retrieve_marketing_knowledge`
+
+### Campaign Strategy Agent
+Ranks segments by opportunity, retrieves playbooks, simulates ROI for multiple scenarios, and produces prioritised recommendations.
+
+**Tools:** `rank_segments_by_opportunity` · `get_campaign_recommendations` · `simulate_campaign`
+
+### Forecasting Agent
+Projects future revenue (linear trend), estimates churn risk (recency heuristics), and calculates Customer Lifetime Value per segment.
+
+**Tools:** `forecast_revenue` · `predict_churn_risk` · `estimate_ltv`
+
+### Insight Narrator
+Synthesises all agent outputs into a single executive narrative. Always the final step before `END`.
+
+---
+
+## Shared State
+
+```python
+class AgentState(TypedDict):
+    messages: Annotated[list[BaseMessage], add_messages]
+    session_id: str
+    user_query: str
+    intent: Intent                        # classified by supervisor
+    active_agent: AgentName
+    next_agent: AgentName
+    agents_used: list[str]                # execution history
+    tools_used: list[str]                 # tool call audit trail
+    iteration_count: int                  # safety guard (max 12)
+    execution_trace: list[ExecutionStep]  # full observability
+    retrieved_docs: list[dict]            # RAG results with citations
+    analysis_results: dict                # keyed by agent name
+    recommendations: list[dict]
+    forecast_data: dict
+    final_response: str
+    confidence_score: float               # 0.0 – 1.0
+    error: str | None
 ```
 
-## Stack
+---
 
-- Python, Pandas, NumPy
-- Scikit-learn, KMeans, PCA, StandardScaler, Silhouette Score
-- FastAPI, Pydantic, Uvicorn
-- Next.js, React, TypeScript
-- Recharts
+## RAG Pipeline
 
-## Local Setup
-
-Use Python 3.11. The pinned Pandas/Numpy/Scikit-learn versions are not compatible with Python 3.14.
-
-From the repository root:
-
-```powershell
-.\.venv311\Scripts\activate
+```
+Documents (PDF · MD · TXT)
+      │
+      ▼  PyPDFLoader / UnstructuredMarkdownLoader / TextLoader
+ Raw Documents
+      │
+      ▼  RecursiveCharacterTextSplitter (512 tokens, 64 overlap)
+ Text Chunks
+      │
+      ▼  OpenAI text-embedding-3-small (1536 dimensions)
+ Embeddings
+      │
+      ▼  upsert → Qdrant collection: marketing_knowledge
+ Vector Store
+      │
+      ▼  similarity_score_threshold retrieval (top-5, score ≥ 0.65)
+ Relevant Chunks → cited in agent response
 ```
 
-If you need to recreate the environment:
+Documents to add: CRM playbooks · campaign strategy guides · ecommerce benchmarks · RFM best practices
 
-```powershell
-py -3.11 -m venv .venv311
-.\.venv311\Scripts\activate
-python -m pip install --upgrade pip
-pip install -r .\files\backend\requirements.txt
+---
+
+## Example Flow
+
+**Query:** *"¿Qué segmento de clientes deberíamos priorizar este mes y qué campaña lanzar?"*
+
+```
+1. SUPERVISOR       classify intent → "campaign"
+                    route → data_analyst
+
+2. DATA ANALYST     get_segment_overview()
+                    compute_segment_stats("At-Risk")
+                    → At-Risk: 847 customers, €142K revenue at stake
+
+3. SUPERVISOR       route → rag_knowledge
+
+4. RAG KNOWLEDGE    retrieve_marketing_knowledge("win-back campaign best practices")
+                    → 4 docs: re-engagement timing, discount thresholds, benchmarks
+
+5. SUPERVISOR       route → campaign_strategy
+
+6. CAMPAIGN STR.    rank_segments_by_opportunity(metric="risk")
+                    simulate_campaign("At-Risk", "Win-Back", budget=5000, discount=15%)
+                    → ROI: 187%, conversions: 203, revenue uplift: €31,400
+
+7. SUPERVISOR       route → insight_narrator
+
+8. INSIGHT NARR.    synthesise → "Recomendamos priorizar el segmento At-Risk
+                    (847 clientes, €142K en riesgo). Una campaña Win-Back con 15%
+                    de descuento proyecta un ROI del 187% sobre €5,000 invertidos..."
+
+9. END              confidence_score: 0.94
+                    agents_used: 5 · tools_used: 7 · docs_retrieved: 4
 ```
 
-## Run the Data Pipeline
+---
 
-```powershell
-cd files\backend
-..\..\.venv311\Scripts\python.exe .\generate_dataset.py
-..\..\.venv311\Scripts\python.exe -m app.ml.train_model
-```
-
-This creates:
-
-- `app/data/processed/online_retail_clean.csv`
-- `app/data/processed/customers_rfm.csv`
-- `app/data/processed/dashboard_summary.json`
-- `app/data/processed/revenue_monthly.json`
-- `app/data/processed/segment_summary.json`
-- `app/data/processed/model_metrics.json`
-- `app/artifacts/kmeans_model.joblib`
-- `app/artifacts/scaler.joblib`
-- `app/artifacts/pca.joblib`
-
-## Run the Backend
-
-```powershell
-cd files\backend
-..\..\.venv311\Scripts\python.exe -m uvicorn app.main:app --reload --port 8000
-```
-
-Open:
-
-```text
-http://localhost:8000/docs
-```
-
-## Run the Frontend
-
-```powershell
-cd files\frontend
-npm install
-npm run dev
-```
-
-Open:
-
-```text
-http://localhost:3000
-```
-
-## User Guide
-
-Spanish usage guide:
-
-```text
-docs/user_guide_es.md
-```
-
-If your API uses a different URL, create `files/frontend/.env.local`:
-
-```text
-NEXT_PUBLIC_API_URL=http://localhost:8000
-```
-
-## API Endpoints
+## API Reference
 
 | Method | Endpoint | Description |
-| --- | --- | --- |
-| GET | `/dashboard/summary` | Business KPIs |
-| GET | `/data/status` | Raw/processed dataset status |
-| GET | `/data/datasets` | Dataset library with active datasets and stats |
-| POST | `/data/datasets/{id}/activate` | Activate or deactivate a dataset and retrain |
-| DELETE | `/data/datasets/{id}` | Delete a dataset and retrain |
-| GET | `/data/config` | Current dataset, RFM and clustering configuration |
-| POST | `/data/config` | Save dataset/RFM/clustering configuration |
-| POST | `/data/infer-schema` | Infer column mapping and quality warnings from CSV/XLSX |
-| POST | `/data/upload` | Upload a new dataset with optional mapping/config and retraining |
-| POST | `/data/retrain` | Rebuild the pipeline from the current raw dataset |
-| GET | `/dashboard/revenue` | Monthly revenue |
-| GET | `/customers` | Paginated customer table |
-| GET | `/customers/{id}` | Customer detail |
-| GET | `/segments` | Segment summary |
-| GET | `/segments/{name}` | Segment detail and customers |
-| GET | `/campaigns/recommendations` | Campaign playbook |
-| POST | `/campaigns/simulate` | Campaign ROI simulation |
-| GET | `/insights` | Automatic insights |
-| GET | `/model/metrics` | KMeans metrics |
-| GET | `/model/clusters` | Cluster interpretation |
-| GET | `/model/cluster-points` | PCA scatter points |
+|--------|----------|-------------|
+| `POST` | `/ai/query` | Natural language question → multiagent response |
+| `POST` | `/ai/report` | Generate structured business report |
+| `POST` | `/ai/recommendations` | AI-powered campaign recommendations |
+| `GET` | `/ai/conversations/{id}` | Retrieve session history |
+| `GET` | `/ai/traces/{id}` | Agent execution audit log |
+| `DELETE` | `/ai/conversations/{id}` | Clear session |
+| `POST` | `/ai/rag/ingest` | Ingest documents into knowledge base |
+| `GET` | `/ai/health` | AI layer health check |
 
-## Results
+**POST /ai/query — example:**
 
-The current generated dataset contains around 126k transaction rows and roughly 2k customers. The pipeline produces a complete RFM table, assigns business segments and trains a 5-cluster KMeans model. The model metrics are exposed through the API and displayed in the frontend methodology section.
+```json
+// Request
+{ "query": "¿Qué segmento priorizar este mes?", "session_id": null }
 
-## Limitations
+// Response
+{
+  "session_id": "3fa1b2c4-...",
+  "intent": "campaign",
+  "response": "## Recomendación Ejecutiva\n\n**At-Risk** debe ser la prioridad...",
+  "agents_used": ["supervisor", "data_analyst", "campaign_strategy", "insight_narrator"],
+  "tools_used": ["get_segment_overview", "simulate_campaign", "retrieve_marketing_knowledge"],
+  "confidence_score": 0.94,
+  "retrieved_docs_count": 4
+}
+```
 
-- Dataset is synthetic, although modeled after Online Retail structure.
-- Insights are rules-based rather than generated with an external LLM.
-- CSV files are used for the MVP instead of a database.
-- Campaign simulator uses assumptions for conversion uplift and channel costs.
-- Flexible ingestion is file-based; native Shopify/HubSpot/Stripe API connectors are roadmap items.
-- Uploaded datasets are persisted in local files for MVP; production should move the registry to PostgreSQL/Supabase object storage.
+---
 
-## Next Steps
+## Project Structure
 
-- Add authentication and workspace-level tenant separation.
-- Persist data in PostgreSQL or Supabase.
-- Connect to real ecommerce/CRM sources such as Shopify, WooCommerce, HubSpot, Klaviyo and Stripe.
-- Add LLM-generated insight narratives with human approval.
-- Deploy frontend to Vercel and backend to Render or Railway.
+```
+marketing-ia/
+├── backend/
+│   ├── app/
+│   │   ├── api/                      # Existing analytics routes
+│   │   ├── ml/                       # RFM, clustering, preprocessing
+│   │   ├── services/                 # DataService, SimulatorService
+│   │   ├── models/                   # Pydantic schemas (existing)
+│   │   └── ai/                       # ← NEW: Multiagent AI layer
+│   │       ├── config.py             # pydantic-settings, .env
+│   │       ├── agents/
+│   │       │   ├── base.py           # LLM factory + trace helpers
+│   │       │   ├── supervisor.py     # Intent routing (structured output)
+│   │       │   ├── data_analyst.py   # KPI + segment analysis
+│   │       │   ├── sql_pandas.py     # Dynamic Pandas queries
+│   │       │   ├── rag_knowledge.py  # RAG-backed retrieval
+│   │       │   ├── campaign_strategy.py  # Campaign design + ROI sim
+│   │       │   ├── forecasting.py    # Revenue + churn + LTV
+│   │       │   └── insight_narrator.py   # Executive narrative
+│   │       ├── graph/
+│   │       │   ├── state.py          # AgentState TypedDict
+│   │       │   ├── builder.py        # StateGraph assembly
+│   │       │   ├── edges.py          # Conditional routing helpers
+│   │       │   └── executor.py       # Async graph runner
+│   │       ├── rag/
+│   │       │   ├── embeddings.py     # OpenAI embedding factory
+│   │       │   ├── store.py          # Qdrant vector store
+│   │       │   ├── ingestion.py      # Load → chunk → embed → store
+│   │       │   ├── retriever.py      # Similarity + MMR retrievers
+│   │       │   └── docs/             # Place knowledge docs here
+│   │       ├── tools/
+│   │       │   ├── data_tools.py     # Dashboard + customer access
+│   │       │   ├── analytics_tools.py    # Pandas computation
+│   │       │   ├── campaign_tools.py     # Recommendations + ROI sim
+│   │       │   ├── forecasting_tools.py  # Revenue + churn + LTV
+│   │       │   ├── report_tools.py       # Report formatting
+│   │       │   └── rag_tools.py          # Knowledge retrieval
+│   │       ├── memory/
+│   │       │   └── conversation.py   # Thread-safe session store
+│   │       ├── schemas/
+│   │       │   ├── requests.py       # AIQueryRequest, AIReportRequest
+│   │       │   └── responses.py      # AIQueryResponse, AITraceResponse
+│   │       ├── services/
+│   │       │   └── ai_service.py     # Orchestration + memory bridge
+│   │       ├── evaluation/
+│   │       │   └── tracer.py         # Structured agent tracing
+│   │       └── api/
+│   │           └── routes_ai.py      # FastAPI AI route handlers
+│   ├── requirements.txt
+│   └── .env.example
+├── frontend/                         # Next.js dashboard
+├── notebooks/                        # Jupyter analysis
+└── docs/                             # Architecture documentation
+```
+
+---
+
+## Installation
+
+### Requirements
+- Python 3.11+
+- Node.js 18+
+- Docker
+- OpenAI API key
+
+### 1. Backend dependencies
+
+```bash
+cd backend
+python -m venv .venv
+.venv\Scripts\activate        # Windows
+pip install -r requirements.txt
+```
+
+### 2. Environment variables
+
+```bash
+cp .env.example .env
+# Add your OPENAI_API_KEY in .env
+```
+
+### 3. Start Qdrant (vector database)
+
+```bash
+docker run -p 6333:6333 qdrant/qdrant
+```
+
+### 4. Ingest knowledge base (optional but recommended)
+
+Add `.pdf`, `.md`, or `.txt` files to `backend/app/ai/rag/docs/`, then:
+
+```bash
+curl -X POST http://localhost:8000/ai/rag/ingest
+```
+
+### 5. Run the API
+
+```bash
+uvicorn app.main:app --reload --port 8000
+```
+
+API docs available at [http://localhost:8000/docs](http://localhost:8000/docs)
+
+### 6. Frontend
+
+```bash
+cd frontend
+npm install && npm run dev
+```
+
+---
+
+## Why Enterprise-Grade
+
+| Property | Implementation |
+|----------|---------------|
+| **Modularity** | One file per agent, one responsibility per module |
+| **Extensibility** | New agent = one file + one line in `builder.py` |
+| **Observability** | Full `execution_trace` per query: agent, tool, duration |
+| **Safety** | Iteration cap (12), error isolation, graceful degradation |
+| **Memory** | Thread-safe session store, drop-in Redis/Postgres upgrade |
+| **RAG quality** | Score-threshold filtering, MMR for diversity, citations |
+| **Type safety** | End-to-end TypedDict state, Pydantic v2, strict annotations |
+| **Async** | Fully async graph via `ainvoke` + `astream_events` ready |
+| **Config** | `pydantic-settings` + `.env`, zero hardcoded secrets |
+| **Routing** | `Command(goto=...)` pattern — supervisor owns all transitions |
+
+---
+
+## Roadmap
+
+**Phase 2 — Memory & Persistence**
+- Redis-backed session memory for horizontal scaling
+- PostgreSQL conversation history
+- LangGraph `checkpointer` for multi-turn stateful workflows
+
+**Phase 3 — Advanced AI**
+- Human-in-the-loop (`interrupt`) for high-stakes decisions
+- Streaming via SSE (`astream_events`)
+- LangSmith tracing integration
+- Agent evaluation suite with ground-truth assertions
+
+**Phase 4 — Production**
+- Docker Compose (API + Qdrant + Redis)
+- Kubernetes deployment manifests
+- Auth middleware on `/ai` routes
+- Prometheus + Grafana observability stack
+
+---
+
+## Tech Stack
+
+**Backend:** Python 3.11 · FastAPI · Pydantic v2 · Pandas · Scikit-learn · Joblib
+
+**AI:** LangGraph 0.2 · LangChain 0.3 · OpenAI GPT-4o-mini · text-embedding-3-small
+
+**RAG:** Qdrant · RecursiveCharacterTextSplitter · PyPDF · Unstructured
+
+**Frontend:** Next.js 14 · React 18 · TypeScript · Recharts · Lucide
+
+**Infrastructure:** Docker · Uvicorn · (Redis · Postgres — roadmap)
+
+---
+
+*Portfolio demonstration of enterprise AI engineering: multiagent orchestration with LangGraph, production RAG pipeline, clean architecture, and real business value.*

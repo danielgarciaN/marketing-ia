@@ -9,11 +9,15 @@ from app.api.routes_dashboard import router as dashboard_router
 from app.api.routes_insights import router as insights_router
 from app.api.routes_model import router as model_router
 from app.api.routes_segments import router as segments_router
+from app.ai.api.routes_ai import router as ai_router
 
 app = FastAPI(
     title="AI Marketing Intelligence Platform",
-    description="Customer Intelligence API: RFM Analysis, Segmentation, Clustering, Campaign Recommendations & Insights",
-    version="1.0.0",
+    description=(
+        "Customer Intelligence API — RFM Analysis, Segmentation, Clustering, "
+        "Campaign Recommendations, Insights & LangGraph Multiagent AI Layer"
+    ),
+    version="2.0.0",
 )
 
 app.add_middleware(
@@ -31,15 +35,17 @@ app.include_router(segments_router)
 app.include_router(campaigns_router)
 app.include_router(insights_router)
 app.include_router(model_router)
+app.include_router(ai_router)
 
 
 @app.get("/", tags=["Health"])
 def root():
     return {
         "name": "AI Marketing Intelligence Platform",
-        "version": "1.0.0",
+        "version": "2.0.0",
         "status": "running",
         "docs": "/docs",
+        "ai_layer": "/ai/health",
     }
 
 

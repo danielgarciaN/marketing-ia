@@ -1,0 +1,27 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"c:\\\\Users\\\\danie\\\\OneDrive\\\\Escritorio\\\\Proyectos\\\\marketing-ai\\\\marketing-ia\" -Recurse -Force)",
+      "Bash(Select-Object -Property FullName, PSIsContainer)",
+      "Bash(Sort-Object FullName)",
+      "Bash(Format-Table -AutoSize)",
+      "Bash(python -m pip install langgraph==0.2.55 langchain==0.3.7 langchain-core==0.3.15 langchain-openai==0.2.5 langchain-community==0.3.7 langchain-text-splitters==0.3.2 openai==1.54.4 qdrant-client==1.12.1 langchain-qdrant==0.2.0 pypdf==4.3.1 pydantic-settings==2.1.0)",
+      "Bash(where python *)",
+      "Bash(where pip *)",
+      "Bash(py -m pip --version)",
+      "Bash(python3 -m pip --version)",
+      "Bash(pip install *)",
+      "PowerShell(pip --version)",
+      "PowerShell(python --version)",
+      "PowerShell(Get-Command pip)",
+      "PowerShell(& \"C:\\\\Users\\\\danie\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python314\\\\Scripts\\\\pip.exe\" install langgraph langchain langchain-core langchain-openai langchain-community langchain-text-splitters openai qdrant-client langchain-qdrant pypdf pydantic-settings 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\danie\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python314\\\\Scripts\\\\pip.exe\" install langgraph 2>&1)",
+      "PowerShell(& \"C:\\\\Users\\\\danie\\\\AppData\\\\Local\\\\Programs\\\\Python\\\\Python314\\\\python.exe\" -m pip install langgraph 2>&1)",
+      "PowerShell(py -0p 2>&1)",
+      "PowerShell(py -3.14 -m ensurepip 2>&1)",
+      "PowerShell(py -3.14 -m pip install langgraph langchain langchain-core langchain-openai langchain-community langchain-text-splitters openai qdrant-client langchain-qdrant pypdf pydantic-settings 2>&1)",
+      "PowerShell(py -3.14 -m pip install fastapi==0.104.1 uvicorn==0.24.0 pandas scikit-learn joblib openpyxl python-multipart 2>&1)",
+      "PowerShell(py -3.14 -m pip install \"anyio>=4.0\" \"fastapi>=0.110.0\" \"starlette>=0.36.0\" 2>&1)"
+    ]
+  }
+}
