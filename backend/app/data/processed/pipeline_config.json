@@ -1,6 +1,6 @@
 {
   "source": {
-    "filename": "online_retail.csv",
+    "filename": "03_dirty_dataset_for_cleaning.csv",
     "source_currency": "GBP",
     "column_mapping": {
       "invoice_id": "InvoiceNo",
@@ -10,14 +10,15 @@
       "invoice_date": "InvoiceDate",
       "unit_price": "UnitPrice",
       "customer_id": "CustomerID",
-      "country": "Country"
+      "country": "Country",
+      "revenue": "total_paid"
     }
   },
   "rfm": {
     "score_quantiles": 5,
     "weights": {
       "recency": 1.0,
-      "frequency": 1.0,
+      "frequency": 1.1,
       "monetary": 1.0
     },
     "active_days": 30,

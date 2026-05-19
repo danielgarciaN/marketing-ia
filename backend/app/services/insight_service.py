@@ -13,6 +13,18 @@ def generate_insights() -> list:
     currency = summary.get("source_currency", "GBP")
 
     insights = []
+    if customers.empty:
+        return [
+            {
+                "id": "no_active_data",
+                "category": "Data",
+                "title": "No active datasets",
+                "insight": "There are no active customer datasets feeding the dashboard. Upload or activate a dataset to generate RFM segments, campaign recommendations and business insights.",
+                "priority": "High",
+                "action": "Go to Data Management and activate at least one dataset.",
+                "impact": "High",
+            }
+        ]
 
     # --- VIP Revenue Concentration ---
     vip = next((s for s in segments if s["segment"] == "VIP Customers"), None)

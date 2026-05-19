@@ -5,6 +5,7 @@ import {
   BarChart3,
   Brain,
   Database,
+  Info,
   LineChart,
   type LucideIcon,
   Loader2,
@@ -80,6 +81,16 @@ export default function Home() {
   const [locale, setLocale] = useState<Locale>("en");
   const [currency, setCurrency] = useState<Currency>("GBP");
   const t = copy[locale];
+
+  useEffect(() => {
+    const storedCurrency = window.localStorage.getItem("preferredCurrency");
+    if (storedCurrency === "GBP" || storedCurrency === "EUR") setCurrency(storedCurrency);
+  }, []);
+
+  const changeCurrency = (nextCurrency: Currency) => {
+    setCurrency(nextCurrency);
+    window.localStorage.setItem("preferredCurrency", nextCurrency);
+  };
 
   const loadData = async () => {
     try {
@@ -164,7 +175,7 @@ export default function Home() {
             </div>
             <div className="language-toggle" aria-label="Currency">
               {(["GBP", "EUR"] as Currency[]).map((item) => (
-                <button key={item} className={currency === item ? "active" : ""} onClick={() => setCurrency(item)}>
+                <button key={item} className={currency === item ? "active" : ""} onClick={() => changeCurrency(item)}>
                   {item}
                 </button>
               ))}
@@ -178,7 +189,7 @@ export default function Home() {
         {data ? (
           <>
             {activeView === "overview" ? <Overview data={data} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
-            {activeView === "data" ? <DataManager labels={t.data} currency={currency} setCurrency={setCurrency} onRefresh={loadData} /> : null}
+            {activeView === "data" ? <DataManager labels={t.data} currency={currency} onRefresh={loadData} /> : null}
             {activeView === "customers" ? <Customers data={data} locale={locale} currency={currency} sourceCurrency={sourceCurrency(data)} /> : null}
             {activeView === "segments" ? (
               <Segments
@@ -377,6 +388,11 @@ function Clustering({ data, locale, currency, sourceCurrency }: { data: AppData;
   const t = copy[locale];
   return (
     <div className="view-stack">
+      <section className="explain-row">
+        <InfoTip label={t.clustering.clusters} text={t.tooltips.clustering} />
+        <InfoTip label={t.clustering.silhouette} text={t.tooltips.silhouette} />
+        <InfoTip label="PCA" text={t.tooltips.pca} />
+      </section>
       <section className="metrics-grid compact">
         <DashboardCard label={t.clustering.clusters} value={String(data.metrics.n_clusters)} detail={t.clustering.kmeansGroups} tone="blue" />
         <DashboardCard label={t.clustering.silhouette} value={String(data.metrics.silhouette_score)} detail={t.clustering.clusterSeparation} tone="green" />
@@ -384,6 +400,16 @@ function Clustering({ data, locale, currency, sourceCurrency }: { data: AppData;
       </section>
       <ClusterScatterPlot points={data.clusterPoints} title={t.clustering.title} subtitle={t.clustering.subtitle} revenueLabel={t.clustering.revenue} currency={currency} sourceCurrency={sourceCurrency} />
     </div>
+  );
+}
+
+function InfoTip({ label, text }: { label: string; text: string }) {
+  return (
+    <span className="info-explain" tabIndex={0}>
+      <Info size={15} />
+      <strong>{label}</strong>
+      <span>{text}</span>
+    </span>
   );
 }
 

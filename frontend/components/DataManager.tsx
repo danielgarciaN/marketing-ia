@@ -1,10 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Database, RefreshCw, Settings2, Upload } from "lucide-react";
+import type { ReactNode } from "react";
+import { AlertTriangle, CheckCircle2, Database, Info, RefreshCw, Settings2, Trash2, Upload, X } from "lucide-react";
 import { api } from "@/lib/api";
-import type { DataFieldMetadata, DataStatus, DataUploadResult, PipelineConfig, SchemaInference } from "@/lib/types";
-import type { Currency } from "@/lib/format";
+import type { DataFieldMetadata, DataStatus, DataUploadResult, DatasetRecord, DatasetRegistry, PipelineConfig, SchemaInference } from "@/lib/types";
+import { formatCurrency, type Currency } from "@/lib/format";
 
 const defaultConfig: PipelineConfig = {
   source: { filename: "online_retail.csv", source_currency: "GBP", column_mapping: {} },
@@ -28,54 +29,14 @@ const defaultConfig: PipelineConfig = {
 export function DataManager({
   labels,
   currency,
-  setCurrency,
   onRefresh,
 }: {
-  labels: {
-    title: string;
-    description: string;
-    selectFile: string;
-    retrain: string;
-    upload: string;
-    uploading: string;
-    retrainOnly: string;
-    refreshing: string;
-    status: string;
-    rawDataset: string;
-    processedCustomers: string;
-    customers: string;
-    requiredColumns: string;
-    lastModified: string;
-    notAvailable: string;
-    success: string;
-    currencyTitle: string;
-    currencyDescription: string;
-    baseCurrency: string;
-    convertedCurrency: string;
-    backendOutdated: string;
-    mappingTitle: string;
-    mappingDescription: string;
-    inferReady: string;
-    missingFields: string;
-    qualityWarnings: string;
-    rfmTitle: string;
-    rfmDescription: string;
-    sourceCurrency: string;
-    recencyWeight: string;
-    frequencyWeight: string;
-    monetaryWeight: string;
-    activeDays: string;
-    inactiveDays: string;
-    clusters: string;
-    autoClusters: string;
-    saveConfig: string;
-    configSaved: string;
-  };
+  labels: Record<string, string>;
   currency: Currency;
-  setCurrency: (currency: Currency) => void;
   onRefresh: () => Promise<void>;
 }) {
   const [status, setStatus] = useState<DataStatus | null>(null);
+  const [registry, setRegistry] = useState<DatasetRegistry | null>(null);
   const [file, setFile] = useState<File | null>(null);
   const [inference, setInference] = useState<SchemaInference | null>(null);
   const [mapping, setMapping] = useState<Record<string, string>>({});
@@ -83,16 +44,18 @@ export function DataManager({
   const [retrain, setRetrain] = useState(true);
   const [loading, setLoading] = useState(false);
   const [inferring, setInferring] = useState(false);
+  const [mappingOpen, setMappingOpen] = useState(false);
+  const [configOpen, setConfigOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const fieldMetadata = useMemo<DataFieldMetadata[]>(() => {
-    return inference?.field_metadata ?? status?.required_fields ?? [];
-  }, [inference, status]);
+  const sourceCurrency = config.source.source_currency === "EUR" ? "EUR" : "GBP";
+  const fieldMetadata = useMemo<DataFieldMetadata[]>(() => inference?.field_metadata ?? status?.required_fields ?? [], [inference, status]);
 
   const loadStatus = async () => {
-    const currentStatus = await api.dataStatus();
+    const [currentStatus, currentRegistry] = await Promise.all([api.dataStatus(), api.datasets()]);
     setStatus(currentStatus);
+    setRegistry(currentRegistry);
     if (currentStatus.config) {
       setConfig(currentStatus.config);
       setMapping(currentStatus.config.source.column_mapping ?? {});
@@ -100,7 +63,7 @@ export function DataManager({
   };
 
   useEffect(() => {
-    loadStatus().catch((err) => setError(err instanceof Error ? err.message : "Could not load data status"));
+    loadStatus().catch((err) => setError(err instanceof Error ? err.message : labels.loadError));
   }, []);
 
   const handleFile = async (nextFile: File | null) => {
@@ -108,6 +71,7 @@ export function DataManager({
     setInference(null);
     setError(null);
     setMessage(null);
+    setMappingOpen(false);
     if (!nextFile) return;
 
     setInferring(true);
@@ -115,40 +79,20 @@ export function DataManager({
       const result = await api.inferSchema(nextFile);
       setInference(result);
       setMapping(result.mapping);
-      setMessage(labels.inferReady);
+      setMessage(result.needs_manual_review ? labels.reviewNeeded : labels.autoMapped);
+      if (result.needs_manual_review) setMappingOpen(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Schema inference failed");
+      setError(err instanceof Error ? err.message : labels.schemaFailed);
     } finally {
       setInferring(false);
     }
   };
 
   const configPayload = (): Partial<PipelineConfig> => ({
-    source: {
-      ...config.source,
-      source_currency: config.source.source_currency,
-      column_mapping: mapping,
-    },
+    source: { ...config.source, source_currency: config.source.source_currency, column_mapping: mapping },
     rfm: config.rfm,
     clustering: config.clustering,
   });
-
-  const handleUpload = async () => {
-    if (!file) return;
-    await runAction(() => api.uploadDataset(file, retrain, mapping, configPayload()));
-  };
-
-  const handleRetrain = async () => {
-    await runAction(() => api.retrainData(configPayload()));
-  };
-
-  const handleSaveConfig = async () => {
-    await runAction(async () => {
-      const saved = await api.saveConfig(configPayload());
-      setConfig(saved);
-      return { status: "saved", config: saved };
-    }, labels.configSaved);
-  };
 
   const runAction = async (action: () => Promise<DataUploadResult>, successMessage = labels.success) => {
     setLoading(true);
@@ -160,27 +104,56 @@ export function DataManager({
       await onRefresh();
       setMessage(successMessage);
     } catch (err) {
-      const message = err instanceof Error ? err.message : "Data update failed";
-      setError(message.includes("404") ? labels.backendOutdated : message);
+      const current = err instanceof Error ? err.message : labels.updateFailed;
+      setError(current.includes("404") ? labels.backendOutdated : current);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleUpload = async () => {
+    if (!file) return;
+    await runAction(() => api.uploadDataset(file, retrain, mapping, configPayload()));
+  };
+
+  const handleRetrain = async () => {
+    await runAction(() => api.retrainData(configPayload()), labels.retrained);
+  };
+
+  const handleSaveConfig = async () => {
+    await runAction(async () => {
+      const saved = await api.saveConfig(configPayload());
+      setConfig(saved);
+      return { status: "saved", config: saved };
+    }, labels.configSaved);
+    setConfigOpen(false);
+  };
+
+  const toggleDataset = async (dataset: DatasetRecord) => {
+    await runAction(() => api.setDatasetActive(dataset.id, !dataset.active), dataset.active ? labels.datasetDisabled : labels.datasetEnabled);
+  };
+
+  const removeDataset = async (dataset: DatasetRecord) => {
+    await runAction(() => api.deleteDataset(dataset.id), labels.datasetDeleted);
+  };
+
   const updateWeight = (key: keyof PipelineConfig["rfm"]["weights"], value: number) => {
-    setConfig((current) => ({
-      ...current,
-      rfm: { ...current.rfm, weights: { ...current.rfm.weights, [key]: value } },
-    }));
+    setConfig((current) => ({ ...current, rfm: { ...current.rfm, weights: { ...current.rfm.weights, [key]: value } } }));
   };
 
   return (
     <div className="view-stack">
-      <section className="data-grid">
-        <article className="data-panel">
+      <section className="metrics-grid compact">
+        <MiniMetric label={labels.activeDatasets} value={String(registry?.active_datasets ?? 0)} detail={`${registry?.total_datasets ?? 0} ${labels.totalDatasets}`} />
+        <MiniMetric label={labels.activeCustomers} value={(registry?.active_customers ?? status?.customer_count ?? 0).toLocaleString()} detail={labels.feedsDashboard} />
+        <MiniMetric label={labels.activeRows} value={(registry?.active_rows ?? 0).toLocaleString()} detail={formatCurrency(registry?.active_revenue ?? 0, currency, sourceCurrency)} />
+      </section>
+
+      <section className="data-management-grid">
+        <article className="data-panel upload-center">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">CSV / Excel</span>
+              <span className="eyebrow">{labels.dataCenter}</span>
               <h2>{labels.title}</h2>
             </div>
             <Upload size={22} />
@@ -190,6 +163,23 @@ export function DataManager({
             {labels.selectFile}
             <input type="file" accept=".csv,.xlsx,.xls,text/csv" onChange={(event) => handleFile(event.target.files?.[0] ?? null)} />
           </label>
+
+          {inference ? (
+            <div className={`smart-mapping-card ${inference.needs_manual_review ? "needs-review" : ""}`}>
+              {inference.needs_manual_review ? <AlertTriangle size={20} /> : <CheckCircle2 size={20} />}
+              <div>
+                <strong>{inference.needs_manual_review ? labels.reviewNeeded : labels.autoMapped}</strong>
+                <span>
+                  {inference.columns.length} {labels.columnsDetected} - {inference.quality.rows.toLocaleString()} {labels.previewRows}
+                </span>
+              </div>
+              <button className="secondary-button compact-button" onClick={() => setMappingOpen(true)}>
+                <Settings2 size={15} />
+                {labels.advancedMapping}
+              </button>
+            </div>
+          ) : null}
+
           <label className="check-row">
             <input type="checkbox" checked={retrain} onChange={(event) => setRetrain(event.target.checked)} />
             {labels.retrain}
@@ -197,11 +187,15 @@ export function DataManager({
           <div className="button-row">
             <button className="primary-button" onClick={handleUpload} disabled={!file || loading || inferring}>
               <Upload size={16} />
-              {loading ? labels.uploading : labels.upload}
+              {inferring ? labels.detecting : loading ? labels.uploading : labels.upload}
             </button>
             <button className="secondary-button" onClick={handleRetrain} disabled={loading}>
               <RefreshCw size={16} />
               {loading ? labels.refreshing : labels.retrainOnly}
+            </button>
+            <button className="secondary-button" onClick={() => setConfigOpen(true)}>
+              <Settings2 size={16} />
+              {labels.configureModel}
             </button>
           </div>
           {message ? <div className="success-state">{message}</div> : null}
@@ -211,11 +205,46 @@ export function DataManager({
         <article className="data-panel">
           <div className="section-heading">
             <div>
-              <span className="eyebrow">AI Mapping</span>
-              <h2>{labels.mappingTitle}</h2>
+              <span className="eyebrow">{labels.status}</span>
+              <h2>{labels.pipelineInputs}</h2>
             </div>
-            <Settings2 size={22} />
+            <Database size={22} />
           </div>
+          <div className="status-list">
+            <StatusRow title={labels.rawDataset} info={status?.raw_dataset} labels={labels} />
+            <StatusRow title={labels.processedCustomers} info={status?.processed_customers} labels={labels} />
+          </div>
+          <p>{labels.pipelineDescription}</p>
+        </article>
+      </section>
+
+      <section className="data-panel">
+        <div className="section-heading">
+          <div>
+            <span className="eyebrow">{labels.datasets}</span>
+            <h2>{labels.datasetLibrary}</h2>
+          </div>
+          <InfoTip text={labels.datasetLibraryTip} />
+        </div>
+        <div className="dataset-list">
+          {(registry?.datasets ?? []).map((dataset) => (
+            <DatasetRow
+              key={dataset.id}
+              dataset={dataset}
+              labels={labels}
+              currency={currency}
+              sourceCurrency={sourceCurrency}
+              disabled={loading}
+              onToggle={() => toggleDataset(dataset)}
+              onDelete={() => removeDataset(dataset)}
+            />
+          ))}
+          {registry && registry.datasets.length === 0 ? <div className="empty-state">{labels.noDatasets}</div> : null}
+        </div>
+      </section>
+
+      {mappingOpen ? (
+        <Modal title={labels.advancedMapping} onClose={() => setMappingOpen(false)}>
           <p>{labels.mappingDescription}</p>
           <div className="mapping-grid">
             {fieldMetadata.map((field) => (
@@ -233,7 +262,6 @@ export function DataManager({
               </label>
             ))}
           </div>
-          {inference?.missing_fields.length ? <div className="error-inline">{`${labels.missingFields}: ${inference.missing_fields.join(", ")}`}</div> : null}
           {inference?.quality.warnings.length ? (
             <div className="warning-list">
               <strong>{labels.qualityWarnings}</strong>
@@ -242,15 +270,11 @@ export function DataManager({
               ))}
             </div>
           ) : null}
-        </article>
+        </Modal>
+      ) : null}
 
-        <article className="data-panel">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">RFM</span>
-              <h2>{labels.rfmTitle}</h2>
-            </div>
-          </div>
+      {configOpen ? (
+        <Modal title={labels.configureModel} onClose={() => setConfigOpen(false)}>
           <p>{labels.rfmDescription}</p>
           <div className="config-grid">
             <label>
@@ -275,71 +299,96 @@ export function DataManager({
               {labels.autoClusters}
             </label>
           </div>
-          <button className="secondary-button fit-button" onClick={handleSaveConfig} disabled={loading}>
-            <Settings2 size={16} />
-            {labels.saveConfig}
-          </button>
-        </article>
-
-        <article className="data-panel">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">{labels.status}</span>
-              <h2>{status?.customer_count ? `${status.customer_count.toLocaleString()} ${labels.customers}` : labels.notAvailable}</h2>
-            </div>
-            <Database size={22} />
+          <div className="modal-actions">
+            <button className="secondary-button" onClick={() => setConfigOpen(false)}>{labels.close}</button>
+            <button className="primary-button" onClick={handleSaveConfig} disabled={loading}>{labels.saveConfig}</button>
           </div>
-          <div className="status-list">
-            <StatusRow title={labels.rawDataset} info={status?.raw_dataset} labels={labels} />
-            <StatusRow title={labels.processedCustomers} info={status?.processed_customers} labels={labels} />
-          </div>
-          <div>
-            <strong>{labels.requiredColumns}</strong>
-            <div className="column-list">
-              {(status?.required_columns ?? []).map((column) => (
-                <span key={column}>{column}</span>
-              ))}
-            </div>
-          </div>
-        </article>
-
-        <article className="data-panel">
-          <div className="section-heading">
-            <div>
-              <span className="eyebrow">GBP / EUR</span>
-              <h2>{labels.currencyTitle}</h2>
-            </div>
-          </div>
-          <p>{labels.currencyDescription}</p>
-          <div className="currency-switch">
-            <button className={currency === "GBP" ? "active" : ""} onClick={() => setCurrency("GBP")}>
-              {labels.baseCurrency}
-            </button>
-            <button className={currency === "EUR" ? "active" : ""} onClick={() => setCurrency("EUR")}>
-              {labels.convertedCurrency}
-            </button>
-          </div>
-        </article>
-      </section>
+        </Modal>
+      ) : null}
     </div>
   );
 }
 
-function NumberInput({
-  label,
-  value,
-  min,
-  max,
-  step,
-  onChange,
+function MiniMetric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return (
+    <div className="metric-card">
+      <span>{label}</span>
+      <strong>{value}</strong>
+      <small>{detail}</small>
+    </div>
+  );
+}
+
+function DatasetRow({
+  dataset,
+  labels,
+  currency,
+  sourceCurrency,
+  disabled,
+  onToggle,
+  onDelete,
 }: {
-  label: string;
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  onChange: (value: number) => void;
+  dataset: DatasetRecord;
+  labels: Record<string, string>;
+  currency: Currency;
+  sourceCurrency: Currency;
+  disabled: boolean;
+  onToggle: () => void;
+  onDelete: () => void;
 }) {
+  return (
+    <article className="dataset-row">
+      <div>
+        <div className="dataset-title-row">
+          <strong>{dataset.filename}</strong>
+          <span className={`status-chip ${dataset.active ? "active" : ""}`}>{dataset.active ? labels.active : labels.inactive}</span>
+        </div>
+        <small>
+          {dataset.file_type.toUpperCase()} - {formatBytes(dataset.size_bytes)} - {new Date(dataset.uploaded_at).toLocaleString()}
+        </small>
+      </div>
+      <div className="dataset-stats">
+        <span>{dataset.stats.customers.toLocaleString()} {labels.customers}</span>
+        <span>{dataset.stats.rows.toLocaleString()} {labels.rows}</span>
+        <span>{formatCurrency(dataset.stats.revenue, currency, sourceCurrency)}</span>
+      </div>
+      <div className="dataset-actions">
+        <button className="secondary-button compact-button" onClick={onToggle} disabled={disabled}>
+          {dataset.active ? labels.disable : labels.enable}
+        </button>
+        <button className="danger-button compact-button" onClick={onDelete} disabled={disabled}>
+          <Trash2 size={15} />
+          {labels.delete}
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function Modal({ title, children, onClose }: { title: string; children: ReactNode; onClose: () => void }) {
+  return (
+    <div className="modal-backdrop" role="dialog" aria-modal="true">
+      <div className="modal-panel">
+        <div className="section-heading">
+          <h2>{title}</h2>
+          <button className="icon-button" onClick={onClose} aria-label="Close"><X size={16} /></button>
+        </div>
+        {children}
+      </div>
+    </div>
+  );
+}
+
+function InfoTip({ text }: { text: string }) {
+  return (
+    <span className="info-tip" tabIndex={0}>
+      <Info size={15} />
+      <span>{text}</span>
+    </span>
+  );
+}
+
+function NumberInput({ label, value, min, max, step, onChange }: { label: string; value: number; min: number; max: number; step: number; onChange: (value: number) => void }) {
   return (
     <label>
       {label}
@@ -348,15 +397,7 @@ function NumberInput({
   );
 }
 
-function StatusRow({
-  title,
-  info,
-  labels,
-}: {
-  title: string;
-  info?: { exists: boolean; bytes?: number; modified_at?: number };
-  labels: { lastModified: string; notAvailable: string };
-}) {
+function StatusRow({ title, info, labels }: { title: string; info?: { exists: boolean; bytes?: number; modified_at?: number }; labels: Record<string, string> }) {
   return (
     <div>
       <strong>{title}</strong>
@@ -366,4 +407,9 @@ function StatusRow({
       </small>
     </div>
   );
+}
+
+function formatBytes(bytes: number) {
+  if (bytes < 1024 * 1024) return `${Math.round(bytes / 1024).toLocaleString()} KB`;
+  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }

@@ -1,67 +1,67 @@
 {
   "0": {
-    "size": 312,
-    "avg_recency": 259.97,
-    "avg_frequency": 1.36,
-    "avg_monetary": 26.29,
-    "avg_order_value": 19.38,
-    "traits": [
-      "inactive or lapsed",
-      "low frequency",
-      "low spenders"
-    ],
-    "description": "Cluster 0: inactive or lapsed, low frequency, low spenders (312 customers)"
-  },
-  "1": {
-    "size": 472,
-    "avg_recency": 57.62,
-    "avg_frequency": 3.54,
-    "avg_monetary": 92.69,
-    "avg_order_value": 27.67,
+    "size": 96,
+    "avg_recency": 60.08,
+    "avg_frequency": 16.04,
+    "avg_monetary": 554.5,
+    "avg_order_value": 35.13,
     "traits": [
       "recent buyers",
       "low frequency",
       "low spenders"
     ],
-    "description": "Cluster 1: recent buyers, low frequency, low spenders (472 customers)"
+    "description": "Cluster 0: recent buyers, low frequency, low spenders (96 customers)"
   },
-  "2": {
-    "size": 533,
-    "avg_recency": 25.51,
-    "avg_frequency": 9.0,
-    "avg_monetary": 445.52,
-    "avg_order_value": 50.23,
-    "traits": [
-      "very recent buyers",
-      "above-average frequency",
-      "low spenders"
-    ],
-    "description": "Cluster 2: very recent buyers, above-average frequency, low spenders (533 customers)"
-  },
-  "3": {
-    "size": 376,
-    "avg_recency": 87.79,
-    "avg_frequency": 1.34,
-    "avg_monetary": 17.28,
-    "avg_order_value": 14.21,
+  "1": {
+    "size": 29,
+    "avg_recency": 149.14,
+    "avg_frequency": 8.76,
+    "avg_monetary": 324.05,
+    "avg_order_value": 35.96,
     "traits": [
       "inactive or lapsed",
       "low frequency",
       "low spenders"
     ],
-    "description": "Cluster 3: inactive or lapsed, low frequency, low spenders (376 customers)"
+    "description": "Cluster 1: inactive or lapsed, low frequency, low spenders (29 customers)"
   },
-  "4": {
-    "size": 291,
-    "avg_recency": 9.4,
-    "avg_frequency": 26.98,
-    "avg_monetary": 3613.21,
-    "avg_order_value": 121.93,
+  "2": {
+    "size": 20,
+    "avg_recency": 253.95,
+    "avg_frequency": 2.15,
+    "avg_monetary": 55.58,
+    "avg_order_value": 25.58,
     "traits": [
-      "very recent buyers",
+      "inactive or lapsed",
+      "low frequency",
+      "low spenders"
+    ],
+    "description": "Cluster 2: inactive or lapsed, low frequency, low spenders (20 customers)"
+  },
+  "3": {
+    "size": 76,
+    "avg_recency": 45.18,
+    "avg_frequency": 41.66,
+    "avg_monetary": 1657.77,
+    "avg_order_value": 37.8,
+    "traits": [
+      "recent buyers",
       "very high frequency",
       "high spenders"
     ],
-    "description": "Cluster 4: very recent buyers, very high frequency, high spenders (291 customers)"
+    "description": "Cluster 3: recent buyers, very high frequency, high spenders (76 customers)"
+  },
+  "4": {
+    "size": 25,
+    "avg_recency": 101.04,
+    "avg_frequency": 3.2,
+    "avg_monetary": 82.19,
+    "avg_order_value": 26.49,
+    "traits": [
+      "inactive or lapsed",
+      "low frequency",
+      "low spenders"
+    ],
+    "description": "Cluster 4: inactive or lapsed, low frequency, low spenders (25 customers)"
   }
 }

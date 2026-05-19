@@ -22,7 +22,8 @@ The platform provides:
 - REST API with Swagger documentation.
 - Frontend dashboard connected to the backend API.
 - Bilingual portal UI with English and Spanish mode.
-- Flexible dataset upload, AI-style column mapping and retraining from the portal.
+- Data Management Center with uploaded dataset library, active/inactive datasets, deletion and retraining.
+- Flexible dataset upload, AI-style silent column mapping and fallback manual mapping only when review is needed.
 - Configurable RFM weights, active/inactive windows and KMeans cluster count.
 - GBP/EUR currency display switch.
 
@@ -45,7 +46,7 @@ The generator creates realistic customers, transactions, returns, missing custom
 backend/app/data/raw/online_retail.csv
 ```
 
-The portal can also ingest external CSV/XLSX exports. It infers columns such as order ID, customer ID, date, quantity, unit price, revenue, SKU and country, then normalizes them into the internal schema used by the pipeline.
+The portal can also ingest external CSV/XLSX exports. It infers columns such as order ID, customer ID, date, quantity, unit price, revenue, SKU and country, then normalizes them into the internal schema used by the pipeline. Uploaded datasets are stored in a local registry and only active datasets feed the dashboard.
 
 ## Architecture
 
@@ -158,6 +159,9 @@ NEXT_PUBLIC_API_URL=http://localhost:8000
 | --- | --- | --- |
 | GET | `/dashboard/summary` | Business KPIs |
 | GET | `/data/status` | Raw/processed dataset status |
+| GET | `/data/datasets` | Dataset library with active datasets and stats |
+| POST | `/data/datasets/{id}/activate` | Activate or deactivate a dataset and retrain |
+| DELETE | `/data/datasets/{id}` | Delete a dataset and retrain |
 | GET | `/data/config` | Current dataset, RFM and clustering configuration |
 | POST | `/data/config` | Save dataset/RFM/clustering configuration |
 | POST | `/data/infer-schema` | Infer column mapping and quality warnings from CSV/XLSX |
@@ -186,6 +190,7 @@ The current generated dataset contains around 126k transaction rows and roughly 
 - CSV files are used for the MVP instead of a database.
 - Campaign simulator uses assumptions for conversion uplift and channel costs.
 - Flexible ingestion is file-based; native Shopify/HubSpot/Stripe API connectors are roadmap items.
+- Uploaded datasets are persisted in local files for MVP; production should move the registry to PostgreSQL/Supabase object storage.
 
 ## Next Steps
 

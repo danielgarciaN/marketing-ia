@@ -460,6 +460,12 @@ th {
   gap: 18px;
 }
 
+.data-management-grid {
+  display: grid;
+  grid-template-columns: 1.35fr 0.85fr;
+  gap: 18px;
+}
+
 .data-panel {
   display: grid;
   gap: 14px;
@@ -531,6 +537,20 @@ select {
   font-weight: 700;
 }
 
+.danger-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  padding: 12px 14px;
+  background: #fff7f7;
+  color: #b91c1c;
+  cursor: pointer;
+  font-weight: 700;
+}
+
 .primary-button:disabled {
   opacity: 0.7;
   cursor: wait;
@@ -539,6 +559,16 @@ select {
 .secondary-button:disabled {
   opacity: 0.65;
   cursor: wait;
+}
+
+.danger-button:disabled {
+  opacity: 0.65;
+  cursor: wait;
+}
+
+.compact-button {
+  padding: 8px 10px;
+  font-size: 12px;
 }
 
 .button-row {
@@ -636,6 +666,197 @@ select {
 
 .fit-button {
   width: fit-content;
+}
+
+.upload-center {
+  align-content: start;
+}
+
+.smart-mapping-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  border: 1px solid #bbf7d0;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.smart-mapping-card.needs-review {
+  border-color: #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.smart-mapping-card strong,
+.smart-mapping-card span {
+  display: block;
+}
+
+.smart-mapping-card span {
+  margin-top: 2px;
+  font-size: 12px;
+  color: inherit;
+}
+
+.dataset-list {
+  display: grid;
+  gap: 10px;
+}
+
+.dataset-row {
+  display: grid;
+  grid-template-columns: minmax(220px, 1.2fr) minmax(260px, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: var(--surface);
+}
+
+.dataset-title-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dataset-row small,
+.dataset-stats span {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.dataset-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.dataset-stats span,
+.status-chip {
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: var(--surface-2);
+  font-weight: 700;
+}
+
+.status-chip.active {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.dataset-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(23, 51, 70, 0.36);
+}
+
+.modal-panel {
+  display: grid;
+  gap: 16px;
+  width: min(760px, 100%);
+  max-height: min(760px, 92vh);
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 20px;
+  background: var(--surface);
+  box-shadow: 0 24px 70px rgba(23, 51, 70, 0.22);
+}
+
+.modal-panel p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.icon-button {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--muted);
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.info-tip,
+.info-explain {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.info-tip > span,
+.info-explain > span {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  z-index: 10;
+  width: 260px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #173346;
+  color: white;
+  font-size: 12px;
+  line-height: 1.45;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.info-tip:hover > span,
+.info-tip:focus > span,
+.info-explain:hover > span,
+.info-explain:focus > span {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.explain-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.info-explain {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 8px 11px;
+  background: var(--surface);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.info-explain strong {
+  color: var(--ink);
 }
 
 .success-state,
@@ -815,10 +1036,19 @@ select {
     .two-column,
     .simulator-grid,
     .data-grid,
+    .data-management-grid,
     .mapping-grid,
     .config-grid,
     .method-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dataset-row {
+    grid-template-columns: 1fr;
+  }
+
+  .dataset-actions {
+    justify-content: flex-start;
   }
 }
 

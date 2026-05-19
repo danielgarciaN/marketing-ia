@@ -5,6 +5,7 @@ import type {
   CustomersResponse,
   DataStatus,
   DataUploadResult,
+  DatasetRegistry,
   DashboardSummary,
   Insight,
   ModelMetrics,
@@ -58,6 +59,16 @@ export const api = {
   metrics: () => request<ModelMetrics>("/model/metrics"),
   clusterPoints: () => request<{ data: ClusterPoint[]; total: number; limit: number }>("/model/cluster-points?limit=600"),
   dataStatus: () => request<DataStatus>("/data/status"),
+  datasets: () => request<DatasetRegistry>("/data/datasets"),
+  setDatasetActive: (id: string, active: boolean) =>
+    request<DataUploadResult>(`/data/datasets/${id}/activate`, {
+      method: "POST",
+      body: JSON.stringify({ active }),
+    }),
+  deleteDataset: (id: string) =>
+    request<DataUploadResult>(`/data/datasets/${id}`, {
+      method: "DELETE",
+    }),
   config: () => request<PipelineConfig>("/data/config"),
   saveConfig: (body: Partial<PipelineConfig>) =>
     request<PipelineConfig>("/data/config", {

@@ -81,12 +81,35 @@ Desde esa pantalla puedes:
 
 1. Seleccionar un archivo CSV o Excel.
 2. Ver una inferencia automatica de columnas.
-3. Corregir el mapping si tu export usa nombres distintos.
-4. Ajustar pesos RFM, dias activo/inactivo y numero de clusters.
-5. Decidir si quieres reentrenar automaticamente despues de subirlo.
-6. Subir el dataset.
-7. Ver el estado del dataset raw y los datos procesados.
-8. Reentrenar manualmente el dataset actual.
+3. Dejar que el sistema haga el mapping automaticamente si tiene alta confianza.
+4. Abrir `Mapping avanzado` solo si hay campos dudosos o quieres corregir algo.
+5. Ajustar pesos RFM, dias activo/inactivo y numero de clusters desde `Configurar modelo`.
+6. Activar, desactivar o eliminar datasets desde la biblioteca.
+7. Decidir si quieres reentrenar automaticamente despues de subirlo.
+8. Subir el dataset.
+9. Ver que datasets alimentan dashboard, clientes, segmentos, clustering e insights.
+
+## Gestion real de datasets
+
+La pantalla `Data / Datos` funciona como un pequeno centro de gestion:
+
+- Muestra todos los datasets subidos.
+- Indica que datasets estan activos.
+- Permite desactivar un dataset sin borrarlo.
+- Permite eliminar un dataset.
+- Muestra clientes, filas, revenue, tipo de archivo, tamano y fecha de subida.
+- Recalcula metricas automaticamente al activar, desactivar o eliminar.
+
+Solo los datasets activos alimentan:
+
+- Dashboard ejecutivo.
+- Tabla de clientes.
+- Segmentacion RFM.
+- Clustering.
+- Recomendaciones de campanas.
+- Insights automaticos.
+
+Esto permite quitar clientes de un dataset sin tocar otros datos: simplemente desactiva o elimina ese dataset y la plataforma recalcula todo.
 
 La plataforma normaliza internamente a estas columnas:
 
@@ -124,16 +147,20 @@ Cuando subes un archivo con `Retrain after upload` activado, el backend hace est
 2. Detecta columnas y tipos de datos.
 3. Aplica el mapping elegido en el portal.
 4. Normaliza el dataset al esquema interno.
-5. Guarda el CSV canonico en `backend/app/data/raw/online_retail.csv`.
-6. Ejecuta el pipeline completo de entrenamiento.
-7. Regenera los CSV/JSON procesados.
-8. Recarga los datos en memoria.
-9. El frontend refresca el dashboard.
+5. Anade el dataset a la biblioteca local.
+6. Reconstruye `backend/app/data/raw/online_retail.csv` combinando todos los datasets activos.
+7. Ejecuta el pipeline completo de entrenamiento.
+8. Regenera los CSV/JSON procesados.
+9. Recarga los datos en memoria.
+10. El frontend refresca el dashboard.
 
 Endpoints usados:
 
 ```text
 GET  /data/status
+GET  /data/datasets
+POST /data/datasets/{id}/activate
+DELETE /data/datasets/{id}
 GET  /data/config
 POST /data/config
 POST /data/infer-schema
@@ -253,14 +280,16 @@ Sirve para gestionar el dataset:
 
 - Subir un nuevo CSV o Excel.
 - Detectar columnas automaticamente.
-- Corregir mapping de columnas.
-- Configurar pesos RFM.
-- Configurar dias activo/inactivo.
-- Configurar clusters KMeans.
+- Revisar mapping solo cuando haga falta.
+- Activar o desactivar datasets.
+- Eliminar datasets.
+- Configurar pesos RFM desde un popup.
+- Configurar dias activo/inactivo desde un popup.
+- Configurar clusters KMeans desde un popup.
 - Reentrenar el pipeline.
 - Ver estado de dataset raw y procesado.
 - Consultar columnas internas del modelo.
-- Cambiar visualizacion GBP/EUR.
+- La moneda se cambia desde el header global `GBP | EUR`.
 
 ### Customers / Clientes
 
@@ -339,6 +368,9 @@ Resume el enfoque tecnico:
 
 ```text
 GET  /data/status
+GET  /data/datasets
+POST /data/datasets/{id}/activate
+DELETE /data/datasets/{id}
 GET  /data/config
 POST /data/config
 POST /data/infer-schema

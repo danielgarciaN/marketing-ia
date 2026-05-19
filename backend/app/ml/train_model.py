@@ -25,6 +25,10 @@ def run_pipeline(config: dict | None = None):
     print("\nStep 1: Loading and cleaning data...")
     df = load_raw_data()
     df = clean_data(df)
+    if df.empty:
+        print("  No active rows found. Writing empty processed outputs.")
+        write_empty_outputs(config)
+        return df, {}, {"n_clusters": 0, "silhouette_score": 0, "inertia": 0, "eval_results": {"k": [], "silhouette": [], "inertia": []}}
     save_processed(df)
 
     print("\nStep 2: Building RFM table...")
@@ -118,6 +122,88 @@ def run_pipeline(config: dict | None = None):
 
     print("\nPipeline complete!")
     return rfm, interpretations, metrics
+
+
+def write_empty_outputs(config: dict | None = None):
+    config = config or load_pipeline_config()
+    os.makedirs(PROCESSED_DIR, exist_ok=True)
+
+    empty_transactions = [
+        "InvoiceNo",
+        "StockCode",
+        "Description",
+        "Quantity",
+        "InvoiceDate",
+        "UnitPrice",
+        "CustomerID",
+        "Country",
+        "Revenue",
+        "InvoiceMonth",
+        "InvoiceDay",
+    ]
+    empty_customers = [
+        "CustomerID",
+        "Recency",
+        "Frequency",
+        "Monetary",
+        "TotalOrders",
+        "TotalItems",
+        "FirstPurchase",
+        "LastPurchase",
+        "Country",
+        "UniqueProducts",
+        "AvgOrderValue",
+        "R_Score",
+        "F_Score",
+        "M_Score",
+        "RFM_Score",
+        "Weighted_RFM_Score",
+        "RF_Score",
+        "Segment",
+        "Cluster",
+        "PCA_1",
+        "PCA_2",
+    ]
+
+    import pandas as pd
+
+    pd.DataFrame(columns=empty_transactions).to_csv(os.path.join(PROCESSED_DIR, "online_retail_clean.csv"), index=False)
+    pd.DataFrame(columns=empty_customers).to_csv(os.path.join(PROCESSED_DIR, "customers_rfm.csv"), index=False)
+
+    dashboard = {
+        "total_customers": 0,
+        "total_revenue": 0,
+        "total_orders": 0,
+        "avg_order_value": 0,
+        "avg_frequency": 0,
+        "active_customers": 0,
+        "inactive_customers": 0,
+        "top_country": "Not available",
+        "source_currency": config.get("source", {}).get("source_currency", "GBP"),
+        "rfm_weights": config.get("rfm", {}).get("weights", {}),
+        "date_range": {"start": None, "end": None},
+    }
+
+    outputs = {
+        "dashboard_summary.json": dashboard,
+        "revenue_monthly.json": [],
+        "segment_summary.json": [],
+        "cluster_interpretations.json": {},
+        "model_metrics.json": {
+            "n_clusters": 0,
+            "silhouette_score": 0,
+            "inertia": 0,
+            "eval_k": [],
+            "eval_silhouette": [],
+            "eval_inertia": [],
+            "rfm_config": config.get("rfm", {}),
+            "clustering_config": config.get("clustering", {}),
+        },
+    }
+
+    for filename, payload in outputs.items():
+        with open(os.path.join(PROCESSED_DIR, filename), "w") as f:
+            json.dump(payload, f, indent=2)
 
 
 if __name__ == "__main__":

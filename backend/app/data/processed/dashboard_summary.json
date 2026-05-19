@@ -1,20 +1,20 @@
 {
-  "total_customers": 1984,
-  "total_revenue": 1347358.54,
-  "total_orders": 15243,
-  "avg_order_value": 88.39,
-  "avg_frequency": 7.68,
-  "active_customers": 881,
-  "inactive_customers": 299,
-  "top_country": "United Kingdom",
+  "total_customers": 246,
+  "total_revenue": 191786.16,
+  "total_orders": 834,
+  "avg_order_value": 229.96,
+  "avg_frequency": 20.66,
+  "active_customers": 40,
+  "inactive_customers": 24,
+  "top_country": "Netherlands",
   "source_currency": "GBP",
   "rfm_weights": {
     "recency": 1.0,
-    "frequency": 1.0,
+    "frequency": 1.1,
     "monetary": 1.0
   },
   "date_range": {
-    "start": "2010-12-01",
-    "end": "2011-12-08"
+    "start": "2024-01-02",
+    "end": "2025-05-11"
   }
 }

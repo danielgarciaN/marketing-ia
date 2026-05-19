@@ -3,6 +3,7 @@ from io import BytesIO
 import json
 import os
 import re
+import zlib
 from typing import Any
 
 import pandas as pd
@@ -11,6 +12,14 @@ from fastapi import APIRouter, File, Form, HTTPException, UploadFile
 from app.ml.preprocess import RAW_PATH
 from app.ml.train_model import run_pipeline
 from app.services.data_service import DATA_DIR, data_service
+from app.services.dataset_registry_service import (
+    add_dataset,
+    bootstrap_default_dataset,
+    build_active_raw_dataset,
+    delete_dataset,
+    registry_summary,
+    set_dataset_active,
+)
 from app.services.pipeline_config_service import (
     CANONICAL_FIELDS,
     REQUIRED_CANONICAL_FIELDS,
@@ -37,17 +46,18 @@ FIELD_SYNONYMS = {
     "invoice_id": ["invoiceno", "invoice", "invoiceid", "orderid", "ordernumber", "order", "transactionid", "transaction"],
     "product_id": ["stockcode", "sku", "productid", "productcode", "itemid", "variantid"],
     "description": ["description", "productname", "product", "itemname", "title", "name"],
-    "quantity": ["quantity", "qty", "units", "items", "itemquantity", "lineitemquantity"],
+    "quantity": ["quantity", "qty", "units", "items", "itemquantity", "lineitemquantity", "unitsbought", "unitsordered"],
     "invoice_date": ["invoicedate", "date", "orderdate", "createdat", "created", "timestamp", "purchasedate"],
-    "unit_price": ["unitprice", "price", "unitcost", "itemprice", "lineprice", "amount", "subtotal"],
-    "customer_id": ["customerid", "customer", "userid", "buyerid", "clientid", "email", "customeremail"],
-    "country": ["country", "billingcountry", "shippingcountry", "market", "region"],
-    "revenue": ["revenue", "sales", "total", "totalprice", "ordertotal", "lineitemtotal", "grosssales", "netrevenue"],
+    "unit_price": ["unitprice", "price", "unitcost", "itemprice", "lineprice", "amount", "subtotal", "priceeach"],
+    "customer_id": ["customerid", "customer", "userid", "buyerid", "clientid", "email", "customeremail", "clientidentifier", "customeridentifier"],
+    "country": ["country", "billingcountry", "shippingcountry", "market", "region", "marketcountry"],
+    "revenue": ["revenue", "sales", "total", "totalprice", "ordertotal", "lineitemtotal", "grosssales", "netrevenue", "totalpaid", "totalspent"],
 }
 
 
 @router.get("/status")
 def get_data_status():
+    bootstrap_default_dataset()
     raw_info = _file_info(RAW_PATH)
     processed_path = os.path.join(DATA_DIR, "customers_rfm.csv")
     processed_info = _file_info(processed_path)
@@ -59,6 +69,7 @@ def get_data_status():
         "required_fields": _field_metadata(),
         "required_columns": sorted(CANONICAL_FIELDS.values()),
         "config": config,
+        "dataset_registry": registry_summary(),
         "loaded_in_memory": data_service._loaded,
     }
 
@@ -68,6 +79,38 @@ def get_data_status():
         status["segments"] = sorted(customers["Segment"].dropna().unique().tolist())
 
     return status
+
+
+@router.get("/datasets")
+def get_datasets():
+    bootstrap_default_dataset()
+    return registry_summary()
+
+
+@router.post("/datasets/{dataset_id}/activate")
+def activate_dataset(dataset_id: str, payload: dict[str, Any]):
+    try:
+        dataset = set_dataset_active(dataset_id, bool(payload.get("active", True)))
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Dataset not found.") from exc
+
+    config = load_pipeline_config()
+    build_result = build_active_raw_dataset()
+    training = _run_training(config)
+    return {"dataset": dataset, "build": build_result, "training": training, "registry": registry_summary()}
+
+
+@router.delete("/datasets/{dataset_id}")
+def remove_dataset(dataset_id: str):
+    try:
+        dataset = delete_dataset(dataset_id)
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail="Dataset not found.") from exc
+
+    config = load_pipeline_config()
+    build_result = build_active_raw_dataset()
+    training = _run_training(config)
+    return {"deleted": dataset, "build": build_result, "training": training, "registry": registry_summary()}
 
 
 @router.get("/config")
@@ -89,15 +132,18 @@ async def infer_schema(file: UploadFile = File(...)):
     df = _read_tabular_file(content, file.filename, preview_only=True)
     inference = _infer_mapping(df)
     quality = _profile_dataframe(df, inference["mapping"])
+    missing = _missing_fields(inference["mapping"])
     return {
         "filename": file.filename,
         "columns": df.columns.tolist(),
         "sample_rows": df.head(5).fillna("").to_dict(orient="records"),
         "mapping": inference["mapping"],
         "confidence": inference["confidence"],
-        "missing_fields": _missing_fields(inference["mapping"]),
+        "missing_fields": missing,
         "field_metadata": _field_metadata(),
         "quality": quality,
+        "needs_manual_review": bool(missing or _low_confidence_fields(inference["confidence"])),
+        "low_confidence_fields": _low_confidence_fields(inference["confidence"]),
     }
 
 
@@ -137,8 +183,19 @@ async def upload_dataset(
     saved_config = save_pipeline_config(pipeline_config)
 
     normalized = _normalize_dataset(df, column_mapping)
-    os.makedirs(os.path.dirname(RAW_PATH), exist_ok=True)
-    normalized.to_csv(RAW_PATH, index=False)
+    file_type = file.filename.lower().rsplit(".", 1)[-1] if "." in file.filename else "csv"
+    dataset = add_dataset(
+        filename=file.filename,
+        content=content,
+        normalized=normalized,
+        file_type=file_type,
+        mapping=column_mapping,
+        confidence=_infer_mapping(df)["confidence"],
+        quality=_profile_dataframe(normalized, {key: CANONICAL_FIELDS[key] for key in CANONICAL_FIELDS}),
+        source_currency=saved_config.get("source", {}).get("source_currency", "GBP"),
+        active=True,
+    )
+    build_result = build_active_raw_dataset()
 
     result = {
         "status": "uploaded",
@@ -146,6 +203,9 @@ async def upload_dataset(
         "rows": int(len(normalized)),
         "bytes": len(content),
         "raw_path": RAW_PATH,
+        "dataset": dataset,
+        "registry": registry_summary(),
+        "active_build": build_result,
         "mapping": column_mapping,
         "config": saved_config,
         "quality": _profile_dataframe(normalized, {key: CANONICAL_FIELDS[key] for key in CANONICAL_FIELDS}),
@@ -161,11 +221,10 @@ async def upload_dataset(
 
 @router.post("/retrain")
 def retrain_dataset(config: dict[str, Any] | None = None):
-    if not os.path.exists(RAW_PATH):
-        raise HTTPException(status_code=404, detail="Raw dataset not found. Upload a CSV or Excel file first.")
-
     pipeline_config = save_pipeline_config(config or {}) if config else load_pipeline_config()
-    return {"status": "retrained", "config": pipeline_config, "training": _run_training(pipeline_config)}
+    bootstrap_default_dataset()
+    build_result = build_active_raw_dataset()
+    return {"status": "retrained", "config": pipeline_config, "active_build": build_result, "training": _run_training(pipeline_config)}
 
 
 def _run_training(config: dict[str, Any]):
@@ -233,6 +292,10 @@ def _semantic_match(columns: list[str], synonyms: list[str]) -> tuple[str | None
     return best_column, best_score
 
 
+def _low_confidence_fields(confidence: dict[str, float]) -> list[str]:
+    return [field for field, score in confidence.items() if score < 0.8]
+
+
 def _normalize_dataset(df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFrame:
     normalized = pd.DataFrame()
     for field, target in CANONICAL_FIELDS.items():
@@ -253,6 +316,7 @@ def _normalize_dataset(df: pd.DataFrame, mapping: dict[str, str]) -> pd.DataFram
     normalized["Description"] = normalized.get("Description", "Unknown product")
     normalized["Country"] = normalized.get("Country", "Unknown")
     normalized["InvoiceDate"] = pd.to_datetime(normalized["InvoiceDate"], errors="coerce")
+    normalized["CustomerID"] = _normalize_customer_id(normalized["CustomerID"])
 
     missing_columns = [CANONICAL_FIELDS[field] for field in REQUIRED_CANONICAL_FIELDS if CANONICAL_FIELDS[field] not in normalized.columns]
     if missing_columns:
@@ -283,6 +347,22 @@ def _profile_dataframe(df: pd.DataFrame, mapping: dict[str, str]) -> dict[str, A
             profile["warnings"].append(f"Invoice date has {invalid_pct:.1f}% invalid dates.")
 
     return profile
+
+
+def _normalize_customer_id(series: pd.Series) -> pd.Series:
+    numeric = pd.to_numeric(series, errors="coerce")
+    if numeric.notna().all():
+        return numeric
+
+    def stable_id(value: Any) -> int | None:
+        if pd.isna(value):
+            return None
+        text = str(value).strip().lower()
+        if not text:
+            return None
+        return int(zlib.crc32(text.encode("utf-8")))
+
+    return series.map(stable_id)
 
 
 def _missing_fields(mapping: dict[str, str]) -> list[str]:

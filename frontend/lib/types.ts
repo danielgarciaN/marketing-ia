@@ -126,9 +126,41 @@ export type DataStatus = {
   required_columns: string[];
   required_fields?: DataFieldMetadata[];
   config?: PipelineConfig;
+  dataset_registry?: DatasetRegistry;
   loaded_in_memory: boolean;
   customer_count?: number;
   segments?: string[];
+};
+
+export type DatasetRecord = {
+  id: string;
+  filename: string;
+  file_type: string;
+  active: boolean;
+  uploaded_at: string;
+  updated_at: string;
+  size_bytes: number;
+  source_currency: string;
+  mapping: Record<string, string>;
+  confidence: Record<string, number>;
+  quality: { warnings?: string[]; [key: string]: unknown };
+  stats: {
+    rows: number;
+    customers: number;
+    orders: number;
+    revenue: number;
+    date_start?: string | null;
+    date_end?: string | null;
+  };
+};
+
+export type DatasetRegistry = {
+  datasets: DatasetRecord[];
+  total_datasets: number;
+  active_datasets: number;
+  active_rows: number;
+  active_customers: number;
+  active_revenue: number;
 };
 
 export type DataFieldMetadata = {
@@ -177,6 +209,8 @@ export type SchemaInference = {
     warnings: string[];
     [key: string]: unknown;
   };
+  needs_manual_review: boolean;
+  low_confidence_fields: string[];
 };
 
 export type DataUploadResult = {
@@ -185,6 +219,13 @@ export type DataUploadResult = {
   bytes?: number;
   raw_path?: string;
   rows?: number;
+  dataset?: DatasetRecord;
+  registry?: DatasetRegistry;
+  active_build?: {
+    active_dataset_count: number;
+    rows: number;
+    raw_path: string;
+  };
   mapping?: Record<string, string>;
   config?: PipelineConfig;
   quality?: Record<string, unknown>;
