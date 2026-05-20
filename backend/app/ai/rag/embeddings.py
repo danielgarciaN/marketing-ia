@@ -1,18 +1,13 @@
-"""Embedding model factory for the RAG pipeline."""
+"""Fábrica de embeddings para el pipeline RAG.
+
+Delega en llm_factory.get_embeddings() que respeta EMBEDDING_PROVIDER del .env.
+Este módulo se mantiene por compatibilidad — importa directamente de llm_factory
+si prefieres.
+"""
 from __future__ import annotations
 
-from functools import lru_cache
+from langchain_core.embeddings import Embeddings
 
-from langchain_openai import OpenAIEmbeddings
+from app.ai.llm_factory import get_embeddings
 
-from app.ai.config import get_ai_settings
-
-
-@lru_cache(maxsize=1)
-def get_embeddings() -> OpenAIEmbeddings:
-    """Return a singleton OpenAI Embeddings instance."""
-    cfg = get_ai_settings()
-    return OpenAIEmbeddings(
-        model=cfg.embedding_model,
-        api_key=cfg.openai_api_key,
-    )
+__all__ = ["get_embeddings"]

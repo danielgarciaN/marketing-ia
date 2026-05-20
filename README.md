@@ -1,434 +1,495 @@
 # AI Marketing Intelligence Platform
 
-**Enterprise-grade customer intelligence platform powered by a LangGraph multiagent AI system.**
+**Plataforma enterprise de inteligencia de marketing impulsada por un sistema multiagente LangGraph con soporte para modelos locales gratuitos mediante Ollama.**
 
-Transforms raw ecommerce transaction data into actionable marketing strategy through autonomous AI agents, RAG-backed knowledge retrieval, and data-driven campaign simulation.
-
----
-
-## What This Is
-
-A production-ready SaaS platform that combines classical ML analytics with a modern multiagent AI layer:
-
-| Layer | Technology | Purpose |
-|-------|-----------|---------|
-| **Analytics** | Pandas · Scikit-learn | RFM scoring, KMeans clustering, segment KPIs |
-| **API** | FastAPI · Pydantic v2 | REST endpoints for dashboard and analytics |
-| **AI Agents** | LangGraph · LangChain | Autonomous reasoning and orchestration |
-| **RAG** | Qdrant · OpenAI Embeddings | Marketing knowledge retrieval with citations |
-| **Frontend** | Next.js · Recharts | Interactive dashboards and campaign simulator |
+Transforma datos transaccionales de ecommerce en estrategia de marketing accionable a través de agentes autónomos de IA, recuperación de conocimiento RAG y simulación de campañas basada en datos.
 
 ---
 
-## Architecture Overview
+## ¿Qué es este proyecto?
+
+Un sistema de analítica de marketing que combina:
+
+1. **Analítica clásica de ML**: scoring RFM, clustering KMeans, segmentación de clientes
+2. **Capa de IA multiagente**: agentes especializados que razonan, colaboran y producen respuestas de negocio
+3. **RAG (Retrieval-Augmented Generation)**: recuperación de conocimiento desde una base documental en Qdrant
+4. **API REST completa**: FastAPI con todos los endpoints de analítica y la capa de IA
+5. **Dashboard interactivo**: Next.js con visualizaciones, simulador de campañas y gestor de datos
+
+**Lo más importante**: funciona completamente gratis usando Ollama con modelos locales. No necesitas API key de OpenAI para probarlo.
+
+---
+
+## ¿Qué problema resuelve?
+
+Los equipos de marketing de ecommerce necesitan:
+- Saber **qué segmento priorizar** en cada momento
+- Entender **qué campaña lanzar** y con qué presupuesto
+- Predecir **qué clientes van a abandonar**
+- Acceder a **conocimiento estratégico de CRM** sin buscar en documentos
+
+Esta plataforma convierte esas preguntas en lenguaje natural en análisis automáticos, recomendaciones de campaña con ROI estimado y narrativas ejecutivas listas para presentar.
+
+---
+
+## ¿Cómo funciona?
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    FASTAPI APPLICATION (v2.0)                        │
-│                                                                       │
-│  /dashboard  /customers  /segments  /campaigns  /insights  /model    │
-│                         ↓ NEW                                        │
-│              ┌──────────────────────────┐                            │
-│              │    /ai  — AI Layer        │                            │
-│              │  POST /ai/query           │                            │
-│              │  POST /ai/report          │                            │
-│              │  POST /ai/recommendations │                            │
-│              │  GET  /ai/conversations   │                            │
-│              │  GET  /ai/traces          │                            │
-│              │  POST /ai/rag/ingest      │                            │
-│              └──────────┬───────────────┘                            │
-└─────────────────────────┼───────────────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────────────┐
-│                   LANGGRAPH MULTIAGENT ENGINE                         │
-│                                                                       │
-│   START ──► SUPERVISOR ─────────────────────────────────────────┐   │
-│                │                                                  │   │
-│                │ Command(goto=next_agent)                         │   │
-│                ▼                                                  │   │
-│   ┌────────────────────────────────────────────────────────┐     │   │
-│   │                    WORKER AGENTS                        │     │   │
-│   │                                                         │     │   │
-│   │  ┌──────────────┐  ┌─────────────┐  ┌───────────────┐  │     │   │
-│   │  │ DATA ANALYST │  │ SQL/PANDAS  │  │ RAG KNOWLEDGE │  │     │   │
-│   │  │ KPIs·trends  │  │queries·filt │  │best practices │  │     │   │
-│   │  │ segments·RFM │  │ers·metrics  │  │benchmarks·CRM │  │     │   │
-│   │  └──────────────┘  └─────────────┘  └───────────────┘  │     │   │
-│   │                                                         │     │   │
-│   │  ┌──────────────┐  ┌─────────────┐                     │     │   │
-│   │  │  CAMPAIGN    │  │ FORECASTING │                     │     │   │
-│   │  │  STRATEGY    │  │revenue·LTV  │                     │     │   │
-│   │  │  ROI·budget  │  │churn·trends │                     │     │   │
-│   │  └──────────────┘  └─────────────┘                     │     │   │
-│   └────────────────────────┬───────────────────────────────┘     │   │
-│                             │ Command(goto="supervisor")           │   │
-│                             └──────────────────────────────────────┘   │
-│                                      │ (when done)                    │
-│                                      ▼                                │
-│                          ┌───────────────────┐                       │
-│                          │ INSIGHT NARRATOR   │                       │
-│                          │ executive summary  │                       │
-│                          │ business language  │                       │
-│                          └─────────┬─────────┘                       │
-│                                    │                                  │
-│                                   END                                │
-└─────────────────────────────────────────────────────────────────────┘
-                          │
-                          ▼
-              ┌───────────────────────┐
-              │   QDRANT VECTOR DB    │
-              │ marketing_knowledge   │
-              │ CRM playbooks · PDFs  │
-              │ campaign guides · MD  │
-              └───────────────────────┘
+Tú preguntas:
+"¿Qué segmento priorizar este mes y qué campaña lanzar?"
+          │
+          ▼
+┌─────────────────────┐
+│   POST /ai/query    │  ← API FastAPI
+└──────────┬──────────┘
+           │
+           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                MOTOR LANGGRAPH MULTIAGENTE                   │
+│                                                              │
+│  SUPERVISOR ──► DATA ANALYST ──► RAG KNOWLEDGE              │
+│      │                                                       │
+│      └──────► CAMPAIGN STRATEGY ──► INSIGHT NARRATOR ──► FIN│
+└─────────────────────────────────────────────────────────────┘
+           │
+           ▼
+Respuesta ejecutiva con:
+- Segmento At-Risk identificado (847 clientes, €142K en riesgo)
+- Campaña Win-Back recomendada con 15% descuento
+- ROI proyectado: 187% sobre inversión de €5.000
+- Fuentes de conocimiento citadas (playbooks CRM)
 ```
 
 ---
 
-## How LangGraph Works Here
+## ¿Cómo funciona LangGraph aquí?
 
-LangGraph is a graph execution framework for building stateful, multi-step AI workflows.
+LangGraph es el motor de orquestación que conecta todos los agentes.
 
-**Key concepts used in this project:**
+**Conceptos clave**:
 
-- **StateGraph** — a directed graph where each node is an agent function
-- **AgentState** — a shared TypedDict that all agents read from and write to
-- **Command(goto=...)** — agents return routing instructions, not just data
-- **Conditional edges** — the supervisor decides the next node at every step
-- **add_messages** reducer — messages accumulate safely across parallel runs
+| Concepto | Qué hace en este proyecto |
+|---|---|
+| `StateGraph` | Define el grafo de agentes como máquina de estados |
+| `AgentState` | TypedDict compartido que todos los agentes leen y escriben |
+| `Command(goto=...)` | Cada agente decide dinámicamente quién actúa después |
+| `create_react_agent` | Permite a cada agente usar herramientas (tools) de forma autónoma |
 
-**Why LangGraph instead of a simple chain?**
+**Flujo real**:
+1. `START → supervisor` → clasifica la intención de la pregunta
+2. `supervisor → data_analyst` → analiza KPIs y segmentos
+3. `data_analyst → supervisor` → devuelve resultados, supervisor decide siguiente paso
+4. `supervisor → campaign_strategy` → recomienda y simula campañas
+5. `supervisor → insight_narrator` → genera la narrativa ejecutiva final
+6. `insight_narrator → END` → respuesta lista
 
-| Problem | LangGraph solution |
-|---------|-------------------|
-| Complex routing logic | Conditional edges + supervisor pattern |
-| State shared across agents | Single `AgentState` TypedDict |
-| Tool use per agent | `create_react_agent` with typed tools |
-| Safety / loops | `recursion_limit` + `iteration_count` guard |
-| Observability | `execution_trace` built into state |
-
----
-
-## Agents
-
-### Supervisor
-Routes every query to the right sequence of agents. Uses structured LLM output (`RoutingDecision`) to classify intent and decide the next node. Enforces the max-iteration safety limit.
-
-**Intents classified:** `analytics` · `segmentation` · `campaign` · `forecast` · `knowledge` · `report` · `general`
-
-### Data Analyst
-Retrieves KPIs, segment summaries, revenue trends, and RFM distributions via tool calls against the existing DataService.
-
-**Tools:** `get_dashboard_summary` · `get_segment_overview` · `compute_segment_stats` · `get_revenue_trend`
-
-### SQL/Pandas Agent
-Executes dynamic Pandas query expressions against the customer dataset. Enables ad-hoc filtering without hardcoded queries.
-
-**Tools:** `run_pandas_query` · `get_rfm_distribution` · `get_customer_by_id`
-
-### RAG Knowledge Agent
-Retrieves relevant marketing knowledge from Qdrant. Surfaces CRM playbooks, campaign guides, and benchmarks with source citations.
-
-**Tools:** `retrieve_marketing_knowledge`
-
-### Campaign Strategy Agent
-Ranks segments by opportunity, retrieves playbooks, simulates ROI for multiple scenarios, and produces prioritised recommendations.
-
-**Tools:** `rank_segments_by_opportunity` · `get_campaign_recommendations` · `simulate_campaign`
-
-### Forecasting Agent
-Projects future revenue (linear trend), estimates churn risk (recency heuristics), and calculates Customer Lifetime Value per segment.
-
-**Tools:** `forecast_revenue` · `predict_churn_risk` · `estimate_ltv`
-
-### Insight Narrator
-Synthesises all agent outputs into a single executive narrative. Always the final step before `END`.
+El Supervisor siempre decide el siguiente agente. Los workers siempre vuelven al Supervisor. Insight Narrator siempre es el último.
 
 ---
 
-## Shared State
+## Los 7 agentes del sistema
 
-```python
-class AgentState(TypedDict):
-    messages: Annotated[list[BaseMessage], add_messages]
-    session_id: str
-    user_query: str
-    intent: Intent                        # classified by supervisor
-    active_agent: AgentName
-    next_agent: AgentName
-    agents_used: list[str]                # execution history
-    tools_used: list[str]                 # tool call audit trail
-    iteration_count: int                  # safety guard (max 12)
-    execution_trace: list[ExecutionStep]  # full observability
-    retrieved_docs: list[dict]            # RAG results with citations
-    analysis_results: dict                # keyed by agent name
-    recommendations: list[dict]
-    forecast_data: dict
-    final_response: str
-    confidence_score: float               # 0.0 – 1.0
-    error: str | None
-```
+| Agente | Especialidad | Herramientas |
+|---|---|---|
+| **Supervisor** | Clasifica intención y enruta entre agentes | Ninguna (razonamiento puro) |
+| **Data Analyst** | KPIs, revenue, segmentos, tendencias | get_dashboard_summary, compute_segment_stats, get_revenue_trend |
+| **SQL/Pandas Agent** | Consultas dinámicas sobre el dataset | run_pandas_query, get_rfm_distribution |
+| **RAG Knowledge** | Recupera mejores prácticas de marketing | retrieve_marketing_knowledge |
+| **Campaign Strategy** | Recomienda campañas, simula ROI | rank_segments, simulate_campaign, get_recommendations |
+| **Forecasting** | Predice revenue, churn y LTV | forecast_revenue, predict_churn_risk, estimate_ltv |
+| **Insight Narrator** | Convierte todo en narrativa ejecutiva | Ninguna (síntesis de outputs) |
 
 ---
 
-## RAG Pipeline
+## ¿Qué es RAG en este proyecto?
+
+RAG (Retrieval-Augmented Generation) permite que los agentes consulten una **base de conocimiento documental** antes de responder.
 
 ```
-Documents (PDF · MD · TXT)
-      │
-      ▼  PyPDFLoader / UnstructuredMarkdownLoader / TextLoader
- Raw Documents
-      │
-      ▼  RecursiveCharacterTextSplitter (512 tokens, 64 overlap)
- Text Chunks
-      │
-      ▼  OpenAI text-embedding-3-small (1536 dimensions)
- Embeddings
-      │
-      ▼  upsert → Qdrant collection: marketing_knowledge
- Vector Store
-      │
-      ▼  similarity_score_threshold retrieval (top-5, score ≥ 0.65)
- Relevant Chunks → cited in agent response
+Documentos de marketing (PDF, Markdown, TXT)
+          │
+          ▼  Carga y troceo (512 tokens, 64 de solapamiento)
+Fragmentos de texto
+          │
+          ▼  Embeddings: nomic-embed-text (Ollama) o text-embedding-3-small (OpenAI)
+Vectores de 768 o 1536 dimensiones
+          │
+          ▼  Almacenamiento en Qdrant (base de datos vectorial)
+Colección: marketing_knowledge
+          │
+          ▼  Búsqueda por similitud semántica (top-5, score ≥ 0.5)
+Documentos relevantes con citas de fuente
+          │
+          ▼  El agente RAG los incluye en su razonamiento
+Respuesta fundamentada en conocimiento real
 ```
 
-Documents to add: CRM playbooks · campaign strategy guides · ecommerce benchmarks · RFM best practices
+**Documentos incluidos** (en `backend/app/ai/rag/docs/`):
+- `estrategia_rfm.md` — Metodología RFM completa
+- `retencion_clientes_ecommerce.md` — Estrategias de retención y métricas
+- `campanas_crm.md` — Tipos de campañas y mejores prácticas
+- `segmentos_marketing.md` — Los 7 segmentos con caracterización detallada
+- `playbook_recuperacion_clientes.md` — Estrategias win-back y secuencias de recuperación
 
 ---
 
-## Example Flow
+## ¿Cómo usar Ollama (gratis, sin API key)?
 
-**Query:** *"¿Qué segmento de clientes deberíamos priorizar este mes y qué campaña lanzar?"*
+Ollama permite ejecutar modelos LLM localmente en tu máquina, sin coste ni límites.
 
-```
-1. SUPERVISOR       classify intent → "campaign"
-                    route → data_analyst
+**Modelos necesarios**:
+- `llama3.1:8b` — Modelo principal para razonamiento (~4.7 GB)
+- `nomic-embed-text` — Modelo de embeddings para RAG (~274 MB)
 
-2. DATA ANALYST     get_segment_overview()
-                    compute_segment_stats("At-Risk")
-                    → At-Risk: 847 customers, €142K revenue at stake
+**Ventajas de Ollama**:
+- ✅ Completamente gratuito
+- ✅ Sin límite de peticiones
+- ✅ Privacidad total (los datos no salen de tu máquina)
+- ✅ Funciona sin internet una vez descargados los modelos
 
-3. SUPERVISOR       route → rag_knowledge
-
-4. RAG KNOWLEDGE    retrieve_marketing_knowledge("win-back campaign best practices")
-                    → 4 docs: re-engagement timing, discount thresholds, benchmarks
-
-5. SUPERVISOR       route → campaign_strategy
-
-6. CAMPAIGN STR.    rank_segments_by_opportunity(metric="risk")
-                    simulate_campaign("At-Risk", "Win-Back", budget=5000, discount=15%)
-                    → ROI: 187%, conversions: 203, revenue uplift: €31,400
-
-7. SUPERVISOR       route → insight_narrator
-
-8. INSIGHT NARR.    synthesise → "Recomendamos priorizar el segmento At-Risk
-                    (847 clientes, €142K en riesgo). Una campaña Win-Back con 15%
-                    de descuento proyecta un ROI del 187% sobre €5,000 invertidos..."
-
-9. END              confidence_score: 0.94
-                    agents_used: 5 · tools_used: 7 · docs_retrieved: 4
-```
+**Limitaciones vs. OpenAI**:
+- Respuestas algo más lentas (depende de tu hardware)
+- La calidad puede ser inferior en preguntas muy complejas
+- Requiere al menos 8 GB de RAM (16 GB recomendado)
 
 ---
 
-## API Reference
+## Instalación y configuración
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/ai/query` | Natural language question → multiagent response |
-| `POST` | `/ai/report` | Generate structured business report |
-| `POST` | `/ai/recommendations` | AI-powered campaign recommendations |
-| `GET` | `/ai/conversations/{id}` | Retrieve session history |
-| `GET` | `/ai/traces/{id}` | Agent execution audit log |
-| `DELETE` | `/ai/conversations/{id}` | Clear session |
-| `POST` | `/ai/rag/ingest` | Ingest documents into knowledge base |
-| `GET` | `/ai/health` | AI layer health check |
+### Requisitos previos
+- Python 3.11 o superior
+- Node.js 18 o superior
+- Docker Desktop
+- Ollama instalado desde [ollama.com](https://ollama.com)
 
-**POST /ai/query — example:**
+### 1. Clonar y configurar entorno
 
+```powershell
+# Instalar dependencias del backend
+cd backend
+pip install -r requirements.txt
+
+# Copiar configuración de entorno
+copy .env.example .env
+```
+
+### 2. Editar el archivo `.env`
+
+Abre `.env` y configura según el proveedor que vayas a usar:
+
+**Para usar Ollama (gratuito, recomendado para empezar)**:
+```env
+LLM_PROVIDER=ollama
+EMBEDDING_PROVIDER=ollama
+OLLAMA_BASE_URL=http://localhost:11434
+OLLAMA_MODEL=llama3.1:8b
+OLLAMA_EMBEDDING_MODEL=nomic-embed-text
+```
+
+**Para usar OpenAI**:
+```env
+LLM_PROVIDER=openai
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-tu-clave-aqui
+OPENAI_MODEL=gpt-4o-mini
+OPENAI_EMBEDDING_MODEL=text-embedding-3-small
+```
+
+**Para probar sin modelos (modo mock)**:
+```env
+LLM_PROVIDER=mock
+EMBEDDING_PROVIDER=mock
+```
+
+### 3. Instalar y configurar Ollama
+
+```powershell
+# Descarga Ollama desde: https://ollama.com
+# Luego descarga los modelos necesarios:
+
+ollama pull llama3.1:8b        # ~4.7 GB — modelo principal de razonamiento
+ollama pull nomic-embed-text   # ~274 MB — embeddings para RAG
+
+# Verificar que Ollama está corriendo:
+ollama list
+```
+
+### 4. Lanzar Qdrant (base de datos vectorial)
+
+```powershell
+docker run -p 6333:6333 qdrant/qdrant
+```
+
+Qdrant quedará disponible en `http://localhost:6333`
+
+### 5. Iniciar el backend
+
+```powershell
+cd backend
+uvicorn app.main:app --reload --port 8000
+```
+
+API disponible en `http://localhost:8000`
+Documentación Swagger: `http://localhost:8000/docs`
+
+### 6. Ingestar la base de conocimiento RAG
+
+Antes de hacer consultas que usen RAG, ingesta los documentos:
+
+```powershell
+# Con Invoke-RestMethod (PowerShell):
+Invoke-RestMethod -Method Post http://localhost:8000/ai/rag/ingest
+
+# O con curl:
+curl -X POST http://localhost:8000/ai/rag/ingest
+```
+
+Salida esperada:
 ```json
-// Request
-{ "query": "¿Qué segmento priorizar este mes?", "session_id": null }
-
-// Response
 {
-  "session_id": "3fa1b2c4-...",
-  "intent": "campaign",
-  "response": "## Recomendación Ejecutiva\n\n**At-Risk** debe ser la prioridad...",
-  "agents_used": ["supervisor", "data_analyst", "campaign_strategy", "insight_narrator"],
-  "tools_used": ["get_segment_overview", "simulate_campaign", "retrieve_marketing_knowledge"],
-  "confidence_score": 0.94,
-  "retrieved_docs_count": 4
+  "status": "success",
+  "files": [
+    {"file": "estrategia_rfm.md", "chunks": 24},
+    {"file": "retencion_clientes_ecommerce.md", "chunks": 31},
+    ...
+  ],
+  "total_chunks": 128
 }
 ```
 
+### 7. Primera consulta al sistema multiagente
+
+```powershell
+Invoke-RestMethod `
+  -Method Post `
+  -Uri "http://localhost:8000/ai/query" `
+  -ContentType "application/json" `
+  -Body '{"query":"¿Qué segmento de clientes deberíamos priorizar este mes?"}'
+```
+
+### 8. Frontend (dashboard)
+
+```powershell
+cd frontend
+npm install
+npm run dev
+```
+
+Dashboard disponible en `http://localhost:3000`
+
 ---
 
-## Project Structure
+## Modo Mock — probar sin modelos
+
+El modo mock permite probar toda la arquitectura sin Ollama ni OpenAI:
+
+```env
+LLM_PROVIDER=mock
+EMBEDDING_PROVIDER=mock
+```
+
+En este modo:
+- Los agentes devuelven respuestas predefinidas de demostración
+- El pipeline completo se ejecuta (supervisor → agentes → narrator)
+- No se realizan llamadas externas
+- Ideal para desarrollo frontend o testing del pipeline
+
+No se necesita Qdrant activo cuando `EMBEDDING_PROVIDER=mock` (si falla, el RAG devuelve error gracioso sin romper el flujo).
+
+---
+
+## Cambiar de proveedor en tiempo de ejecución
+
+Solo cambia el `.env` y reinicia el servidor:
+
+```powershell
+# .env para Ollama (local, gratuito)
+LLM_PROVIDER=ollama
+EMBEDDING_PROVIDER=ollama
+
+# .env para OpenAI (nube, alta calidad)
+LLM_PROVIDER=openai
+EMBEDDING_PROVIDER=openai
+OPENAI_API_KEY=sk-...
+
+# .env para Mock (desarrollo, sin modelos)
+LLM_PROVIDER=mock
+EMBEDDING_PROVIDER=mock
+```
+
+⚠️ **Nota importante sobre embeddings**: Si cambias `EMBEDDING_PROVIDER` de ollama a openai (o viceversa), las dimensiones de los vectores son diferentes (768 vs 1536). Necesitas **borrar la colección de Qdrant** y volver a ingestar los documentos.
+
+---
+
+## Referencia de endpoints de la API
+
+### Endpoints de IA (nuevos)
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `POST` | `/ai/query` | Consulta en lenguaje natural al sistema multiagente |
+| `POST` | `/ai/report` | Genera un informe estructurado (executive/segment/campaign/forecast) |
+| `POST` | `/ai/recommendations` | Recomendaciones de campaña con ROI simulado |
+| `GET` | `/ai/conversations/{id}` | Historial de la conversación |
+| `GET` | `/ai/traces/{id}` | Traza de ejecución de agentes |
+| `DELETE` | `/ai/conversations/{id}` | Limpia la sesión |
+| `POST` | `/ai/rag/ingest` | Ingesta documentos en la base de conocimiento |
+| `GET` | `/ai/health` | Estado de la capa IA (LLM disponible, RAG activo) |
+
+### Endpoints de analítica (existentes)
+
+| Método | Endpoint | Descripción |
+|---|---|---|
+| `GET` | `/dashboard/summary` | KPIs generales del negocio |
+| `GET` | `/dashboard/revenue` | Serie temporal de revenue mensual |
+| `GET` | `/customers` | Lista paginada de clientes con filtros |
+| `GET` | `/customers/{id}` | Perfil completo de un cliente |
+| `GET` | `/segments` | Resumen de todos los segmentos RFM |
+| `GET` | `/campaigns/recommendations` | Playbooks de campaña por segmento |
+| `POST` | `/campaigns/simulate` | Simula ROI de una campaña |
+| `POST` | `/data/upload` | Carga un nuevo dataset |
+| `POST` | `/data/retrain` | Reentrena el pipeline ML |
+
+---
+
+## Estructura del proyecto
 
 ```
 marketing-ia/
 ├── backend/
 │   ├── app/
-│   │   ├── api/                      # Existing analytics routes
-│   │   ├── ml/                       # RFM, clustering, preprocessing
-│   │   ├── services/                 # DataService, SimulatorService
-│   │   ├── models/                   # Pydantic schemas (existing)
-│   │   └── ai/                       # ← NEW: Multiagent AI layer
-│   │       ├── config.py             # pydantic-settings, .env
-│   │       ├── agents/
-│   │       │   ├── base.py           # LLM factory + trace helpers
-│   │       │   ├── supervisor.py     # Intent routing (structured output)
-│   │       │   ├── data_analyst.py   # KPI + segment analysis
-│   │       │   ├── sql_pandas.py     # Dynamic Pandas queries
-│   │       │   ├── rag_knowledge.py  # RAG-backed retrieval
-│   │       │   ├── campaign_strategy.py  # Campaign design + ROI sim
-│   │       │   ├── forecasting.py    # Revenue + churn + LTV
-│   │       │   └── insight_narrator.py   # Executive narrative
-│   │       ├── graph/
-│   │       │   ├── state.py          # AgentState TypedDict
-│   │       │   ├── builder.py        # StateGraph assembly
-│   │       │   ├── edges.py          # Conditional routing helpers
-│   │       │   └── executor.py       # Async graph runner
-│   │       ├── rag/
-│   │       │   ├── embeddings.py     # OpenAI embedding factory
-│   │       │   ├── store.py          # Qdrant vector store
-│   │       │   ├── ingestion.py      # Load → chunk → embed → store
-│   │       │   ├── retriever.py      # Similarity + MMR retrievers
-│   │       │   └── docs/             # Place knowledge docs here
-│   │       ├── tools/
-│   │       │   ├── data_tools.py     # Dashboard + customer access
-│   │       │   ├── analytics_tools.py    # Pandas computation
-│   │       │   ├── campaign_tools.py     # Recommendations + ROI sim
-│   │       │   ├── forecasting_tools.py  # Revenue + churn + LTV
-│   │       │   ├── report_tools.py       # Report formatting
-│   │       │   └── rag_tools.py          # Knowledge retrieval
-│   │       ├── memory/
-│   │       │   └── conversation.py   # Thread-safe session store
-│   │       ├── schemas/
-│   │       │   ├── requests.py       # AIQueryRequest, AIReportRequest
-│   │       │   └── responses.py      # AIQueryResponse, AITraceResponse
-│   │       ├── services/
-│   │       │   └── ai_service.py     # Orchestration + memory bridge
-│   │       ├── evaluation/
-│   │       │   └── tracer.py         # Structured agent tracing
-│   │       └── api/
-│   │           └── routes_ai.py      # FastAPI AI route handlers
+│   │   ├── api/              Endpoints analíticos existentes
+│   │   ├── ml/               Pipeline RFM + clustering
+│   │   ├── services/         Servicios de datos y simulación
+│   │   └── ai/               Capa multiagente de IA
+│   │       ├── config.py     Configuración centralizada
+│   │       ├── llm_factory.py  ← Fábrica de LLM y Embeddings (CLAVE)
+│   │       ├── agents/       7 agentes especializados
+│   │       ├── graph/        Grafo LangGraph (state, builder, executor)
+│   │       ├── rag/          Pipeline RAG (Qdrant + embeddings)
+│   │       │   └── docs/     Documentos de conocimiento de marketing
+│   │       ├── tools/        Herramientas reutilizables por agentes
+│   │       ├── memory/       Gestión de sesiones de conversación
+│   │       ├── schemas/      Modelos Pydantic de request/response
+│   │       ├── services/     Orquestación FastAPI ↔ LangGraph
+│   │       └── api/          Rutas FastAPI de la capa IA
 │   ├── requirements.txt
 │   └── .env.example
-├── frontend/                         # Next.js dashboard
-├── notebooks/                        # Jupyter analysis
-└── docs/                             # Architecture documentation
+├── frontend/                 Dashboard Next.js
+├── notebooks/                Análisis exploratorio Jupyter
+└── docs/                     Documentación adicional
 ```
 
 ---
 
-## Installation
+## Arquitectura técnica
 
-### Requirements
-- Python 3.11+
-- Node.js 18+
-- Docker
-- OpenAI API key
-
-### 1. Backend dependencies
-
-```bash
-cd backend
-python -m venv .venv
-.venv\Scripts\activate        # Windows
-pip install -r requirements.txt
 ```
-
-### 2. Environment variables
-
-```bash
-cp .env.example .env
-# Add your OPENAI_API_KEY in .env
-```
-
-### 3. Start Qdrant (vector database)
-
-```bash
-docker run -p 6333:6333 qdrant/qdrant
-```
-
-### 4. Ingest knowledge base (optional but recommended)
-
-Add `.pdf`, `.md`, or `.txt` files to `backend/app/ai/rag/docs/`, then:
-
-```bash
-curl -X POST http://localhost:8000/ai/rag/ingest
-```
-
-### 5. Run the API
-
-```bash
-uvicorn app.main:app --reload --port 8000
-```
-
-API docs available at [http://localhost:8000/docs](http://localhost:8000/docs)
-
-### 6. Frontend
-
-```bash
-cd frontend
-npm install && npm run dev
+┌──────────────────────────────────────────────────────────────┐
+│                        FASTAPI v2.0                           │
+│  /dashboard  /customers  /segments  /campaigns  /ai/*         │
+└───────────────────────────┬──────────────────────────────────┘
+                            │
+                            ▼
+┌──────────────────────────────────────────────────────────────┐
+│               MOTOR MULTIAGENTE LANGGRAPH                     │
+│                                                              │
+│  AgentState (estado compartido TypedDict)                    │
+│       │                                                      │
+│  Supervisor ──(Command)──► Data Analyst                      │
+│       ◄──────────────────── │                               │
+│       │                                                      │
+│  Supervisor ──(Command)──► RAG Knowledge ──► Qdrant         │
+│       ◄──────────────────── │                               │
+│       │                                                      │
+│  Supervisor ──(Command)──► Campaign Strategy                │
+│       ◄──────────────────── │                               │
+│       │                                                      │
+│  Supervisor ──(Command)──► Insight Narrator ──► END         │
+└──────────────────────────────────────────────────────────────┘
+          │                              │
+          ▼                              ▼
+┌─────────────────┐          ┌─────────────────────┐
+│  LLM PROVIDER   │          │   QDRANT (RAG)       │
+│                 │          │                       │
+│  ollama ─────── │          │  marketing_knowledge  │
+│  openai ─────── │          │  768 dim (Ollama)     │
+│  mock ─────────  │          │  1536 dim (OpenAI)   │
+└─────────────────┘          └─────────────────────┘
 ```
 
 ---
 
-## Why Enterprise-Grade
+## Por qué es enterprise-grade
 
-| Property | Implementation |
-|----------|---------------|
-| **Modularity** | One file per agent, one responsibility per module |
-| **Extensibility** | New agent = one file + one line in `builder.py` |
-| **Observability** | Full `execution_trace` per query: agent, tool, duration |
-| **Safety** | Iteration cap (12), error isolation, graceful degradation |
-| **Memory** | Thread-safe session store, drop-in Redis/Postgres upgrade |
-| **RAG quality** | Score-threshold filtering, MMR for diversity, citations |
-| **Type safety** | End-to-end TypedDict state, Pydantic v2, strict annotations |
-| **Async** | Fully async graph via `ainvoke` + `astream_events` ready |
-| **Config** | `pydantic-settings` + `.env`, zero hardcoded secrets |
-| **Routing** | `Command(goto=...)` pattern — supervisor owns all transitions |
+| Propiedad | Implementación |
+|---|---|
+| **Modularidad** | Un archivo por agente, una responsabilidad por módulo |
+| **Flexibilidad** | Cambio de proveedor LLM sin tocar código (solo .env) |
+| **Extensibilidad** | Nuevo agente = 1 archivo + 1 línea en builder.py |
+| **Observabilidad** | Traza completa por query: agente, herramienta, duración |
+| **Seguridad** | Límite de iteraciones (12), aislamiento de errores por agente |
+| **Memoria** | Sesiones thread-safe, preparadas para Redis/Postgres |
+| **Tipos** | TypedDict de estado end-to-end, Pydantic v2 estricto |
+| **Async** | Ejecución del grafo completamente asíncrona (`ainvoke`) |
+| **Configuración** | pydantic-settings + .env, sin secretos hardcodeados |
+| **Sin vendor lock-in** | Soporta OpenAI, Ollama o cualquier proveedor LangChain |
 
 ---
 
 ## Roadmap
 
-**Phase 2 — Memory & Persistence**
-- Redis-backed session memory for horizontal scaling
-- PostgreSQL conversation history
-- LangGraph `checkpointer` for multi-turn stateful workflows
+### Fase 2 — Memoria y Persistencia
+- Sesiones de conversación en Redis para escalado horizontal
+- Historial de conversaciones en PostgreSQL
+- LangGraph `checkpointer` para workflows multi-turno persistentes
 
-**Phase 3 — Advanced AI**
-- Human-in-the-loop (`interrupt`) for high-stakes decisions
-- Streaming via SSE (`astream_events`)
-- LangSmith tracing integration
-- Agent evaluation suite with ground-truth assertions
+### Fase 3 — IA Avanzada
+- Streaming de respuestas en tiempo real via SSE
+- Human-in-the-loop para decisiones de alto impacto
+- Evaluación automática de agentes con ground truth
+- Integración LangSmith para trazabilidad completa
 
-**Phase 4 — Production**
-- Docker Compose (API + Qdrant + Redis)
-- Kubernetes deployment manifests
-- Auth middleware on `/ai` routes
-- Prometheus + Grafana observability stack
+### Fase 4 — Producción
+- Docker Compose completo (API + Qdrant + Redis)
+- Manifiestos Kubernetes para despliegue en nube
+- Autenticación y rate limiting en endpoints `/ai`
+- Stack de observabilidad: Prometheus + Grafana
 
 ---
 
-## Tech Stack
+## Stack tecnológico
 
-**Backend:** Python 3.11 · FastAPI · Pydantic v2 · Pandas · Scikit-learn · Joblib
+**Backend:** Python 3.11+ · FastAPI · Pydantic v2 · Pandas · Scikit-learn
 
-**AI:** LangGraph 0.2 · LangChain 0.3 · OpenAI GPT-4o-mini · text-embedding-3-small
+**IA/ML:** LangGraph 1.x · LangChain 1.x · Ollama (local) · OpenAI (nube)
 
-**RAG:** Qdrant · RecursiveCharacterTextSplitter · PyPDF · Unstructured
+**RAG:** Qdrant · nomic-embed-text (Ollama) / text-embedding-3-small (OpenAI)
 
 **Frontend:** Next.js 14 · React 18 · TypeScript · Recharts · Lucide
 
-**Infrastructure:** Docker · Uvicorn · (Redis · Postgres — roadmap)
+**Infraestructura:** Docker · Uvicorn · (Redis · Postgres — roadmap)
 
 ---
 
-*Portfolio demonstration of enterprise AI engineering: multiagent orchestration with LangGraph, production RAG pipeline, clean architecture, and real business value.*
+## Resolución de problemas frecuentes
+
+**El servidor da error al iniciar con Ollama**
+→ Verifica que Ollama está corriendo: `ollama list`
+→ Comprueba que los modelos están descargados: `ollama pull llama3.1:8b`
+
+**RAG no encuentra documentos relevantes**
+→ Verifica que Qdrant está activo: `http://localhost:6333`
+→ Re-ingesta los documentos: `POST /ai/rag/ingest`
+→ Prueba a bajar `RAG_SCORE_THRESHOLD` a 0.3–0.4 en el `.env`
+
+**Las respuestas son lentas con Ollama**
+→ Normal en máquinas con CPU. llama3.1:8b requiere ~8 GB RAM.
+→ Considera llama3.2:3b para máquinas menos potentes (más rápido, menor calidad)
+
+**Error al cambiar de Ollama a OpenAI con Qdrant**
+→ Borra la colección en Qdrant y re-ingesta: las dimensiones de embeddings son diferentes (768 vs 1536)
+
+---
+
+*Proyecto de portfolio que demuestra skills de AI Engineering: orquestación multiagente con LangGraph, pipeline RAG en producción, arquitectura limpia y valor de negocio real.*

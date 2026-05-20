@@ -1,37 +1,37 @@
-# ── Core framework ────────────────────────────────────────────────────────────
+# ── Framework web ─────────────────────────────────────────────────────────────
 fastapi>=0.110.0
-uvicorn==0.24.0
+uvicorn>=0.24.0
 pydantic>=2.5.0
 pydantic-settings>=2.1.0
 python-multipart>=0.0.9
 starlette>=0.36.0
 
-# ── Data & ML ─────────────────────────────────────────────────────────────────
+# ── Datos y Machine Learning ──────────────────────────────────────────────────
 pandas>=2.1.0
 numpy>=1.26.0
 scikit-learn>=1.3.0
 joblib>=1.3.0
 openpyxl>=3.1.0
 
-# ── LangGraph & LangChain (AI multiagent layer) ───────────────────────────────
+# ── LangGraph y LangChain (capa multiagente) ──────────────────────────────────
 langgraph>=1.0.0
 langgraph-prebuilt>=1.0.0
 langchain>=1.0.0
 langchain-core>=1.0.0
-langchain-openai>=1.0.0
-langchain-community>=0.4.0
 langchain-text-splitters>=1.0.0
 
-# ── LLM providers ─────────────────────────────────────────────────────────────
+# ── Proveedores LLM ───────────────────────────────────────────────────────────
+langchain-openai>=1.0.0      # Para LLM_PROVIDER=openai
+langchain-ollama>=1.0.0      # Para LLM_PROVIDER=ollama (modelos locales gratuitos)
 openai>=2.0.0
 
-# ── RAG / Vector store ────────────────────────────────────────────────────────
+# ── RAG / Base de datos vectorial ─────────────────────────────────────────────
 qdrant-client>=1.10.0
 langchain-qdrant>=1.0.0
 
-# ── Document loaders ──────────────────────────────────────────────────────────
+# ── Cargadores de documentos ──────────────────────────────────────────────────
 pypdf>=4.0.0
-# unstructured — install separately if needed: pip install unstructured
+langchain-community>=0.4.0
 
-# ── Observability (optional) ──────────────────────────────────────────────────
-# langsmith>=0.8.0
+# ── Observabilidad (opcional) ─────────────────────────────────────────────────
+# langsmith>=0.8.0     # Descomentar para trazabilidad completa con LangSmith

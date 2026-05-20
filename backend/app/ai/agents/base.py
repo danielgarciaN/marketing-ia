@@ -1,25 +1,15 @@
-"""Base utilities shared by all agent nodes."""
+"""Utilidades base compartidas por todos los agentes."""
 from __future__ import annotations
 
 import time
 from typing import Any
 
-from langchain_core.messages import AIMessage, BaseMessage, ToolMessage
-from langchain_openai import ChatOpenAI
+from langchain_core.messages import AIMessage, BaseMessage
 
-from app.ai.config import get_ai_settings
 from app.ai.graph.state import ExecutionStep
+from app.ai.llm_factory import get_llm  # noqa: F401 — re-exportado para uso directo en agentes
 
-
-def get_llm(temperature: float | None = None) -> ChatOpenAI:
-    """Return a configured ChatOpenAI instance."""
-    cfg = get_ai_settings()
-    return ChatOpenAI(
-        model=cfg.llm_model,
-        temperature=temperature if temperature is not None else cfg.llm_temperature,
-        max_tokens=cfg.llm_max_tokens,
-        api_key=cfg.openai_api_key,
-    )
+__all__ = ["get_llm", "build_trace_step", "extract_tool_names", "last_ai_content"]
 
 
 def build_trace_step(
@@ -41,16 +31,16 @@ def build_trace_step(
 
 
 def extract_tool_names(messages: list[BaseMessage]) -> list[str]:
-    """Extract tool names from a sequence of AI + Tool messages."""
+    """Extrae los nombres de herramientas llamadas de una secuencia de mensajes."""
     names: list[str] = []
     for msg in messages:
         if isinstance(msg, AIMessage) and msg.tool_calls:
             names.extend(tc["name"] for tc in msg.tool_calls)
-    return list(dict.fromkeys(names))  # deduplicate, preserve order
+    return list(dict.fromkeys(names))
 
 
 def last_ai_content(messages: list[BaseMessage]) -> str:
-    """Return the text content of the last AIMessage in the list."""
+    """Devuelve el contenido textual del último AIMessage de la lista."""
     for msg in reversed(messages):
         if isinstance(msg, AIMessage) and isinstance(msg.content, str):
             return msg.content

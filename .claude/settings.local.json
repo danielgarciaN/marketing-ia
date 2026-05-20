@@ -21,7 +21,8 @@
       "PowerShell(py -3.14 -m ensurepip 2>&1)",
       "PowerShell(py -3.14 -m pip install langgraph langchain langchain-core langchain-openai langchain-community langchain-text-splitters openai qdrant-client langchain-qdrant pypdf pydantic-settings 2>&1)",
       "PowerShell(py -3.14 -m pip install fastapi==0.104.1 uvicorn==0.24.0 pandas scikit-learn joblib openpyxl python-multipart 2>&1)",
-      "PowerShell(py -3.14 -m pip install \"anyio>=4.0\" \"fastapi>=0.110.0\" \"starlette>=0.36.0\" 2>&1)"
+      "PowerShell(py -3.14 -m pip install \"anyio>=4.0\" \"fastapi>=0.110.0\" \"starlette>=0.36.0\" 2>&1)",
+      "PowerShell(Get-ChildItem \"c:\\\\Users\\\\danie\\\\OneDrive\\\\Escritorio\\\\Proyectos\\\\marketing-ai\\\\marketing-ia\\\\backend\\\\app\\\\ai\\\\rag\\\\docs\\\\\" | Where-Object {$_.Extension -eq \".md\"} | Select-Object Name, @{N=\"KB\";E={[math]::Round\\($_.Length/1KB,1\\)}})"
     ]
   }
 }
